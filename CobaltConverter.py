@@ -2,6 +2,8 @@ import wx
 import os
 import subprocess
 import pathlib
+import threading
+import re
 
 # פורמטים נתמכים
 VIDEO_FORMATS = ["mp4", "mkv", "avi", "mov", "webm", "flv", "wmv"]
@@ -10,7 +12,7 @@ IMAGE_FORMATS = ["jpg", "jpeg", "png", "bmp", "gif", "tiff", "webp"]
 
 class CobaltConverter(wx.Frame):
     def __init__(self):
-        super().__init__(None, title="CobaltConverter", size=(500, 250))
+        super().__init__(None, title="CobaltConverter", size=(500, 300))
         panel = wx.Panel(self)
 
         vbox = wx.BoxSizer(wx.VERTICAL)
@@ -33,6 +35,10 @@ class CobaltConverter(wx.Frame):
         self.format_choice = wx.ComboBox(panel, choices=[], style=wx.CB_READONLY)
         hbox2.Add(self.format_choice, proportion=1)
         vbox.Add(hbox2, flag=wx.EXPAND | wx.ALL, border=10)
+
+        # Progress bar
+        self.gauge = wx.Gauge(panel, range=100, size=(-1, 25))
+        vbox.Add(self.gauge, flag=wx.EXPAND | wx.ALL, border=10)
 
         # כפתור המרה
         self.convert_btn = wx.Button(panel, label="המר")
@@ -79,14 +85,56 @@ class CobaltConverter(wx.Frame):
         if os.name == "nt":
             ffmpeg_path += ".exe"
 
+        # ננקה progress
+        self.gauge.SetValue(0)
+        self.log.SetLabel("מתחיל המרה...")
+
+        thread = threading.Thread(target=self.run_ffmpeg, args=(ffmpeg_path, input_file, output_file))
+        thread.start()
+
+    def run_ffmpeg(self, ffmpeg_path, input_file, output_file):
         try:
+            # ראשית נביא את משך הוידאו
+            duration_cmd = [ffmpeg_path, "-i", input_file]
+            result = subprocess.run(duration_cmd,
+                        stderr=subprocess.PIPE,
+                        stdout=subprocess.PIPE,
+                        text=True,
+                        encoding="utf-8",
+                        errors="ignore")
+            duration_match = re.search(r"Duration: (\d+):(\d+):(\d+\.\d+)", result.stderr)
+            total_seconds = None
+            if duration_match:
+                h, m, s = duration_match.groups()
+                total_seconds = int(h) * 3600 + int(m) * 60 + float(s)
+
+            # פקודת המרה
             cmd = [ffmpeg_path, "-i", input_file, output_file, "-y"]
-            subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            self.log.SetLabel(f"המרה הושלמה: {output_file}")
-        except subprocess.CalledProcessError as e:
-            self.log.SetLabel("שגיאה בהמרה. בדוק שה־ffmpeg תקין.")
+            process = subprocess.Popen(cmd,
+                           stderr=subprocess.PIPE,
+                           stdout=subprocess.PIPE,
+                           text=True,
+                           encoding="utf-8",
+                           errors="ignore",
+                           universal_newlines=True)
+
+            for line in process.stderr:
+                time_match = re.search(r"time=(\d+):(\d+):(\d+\.\d+)", line)
+                if time_match and total_seconds:
+                    h, m, s = time_match.groups()
+                    current = int(h) * 3600 + int(m) * 60 + float(s)
+                    percent = int((current / total_seconds) * 100)
+                    wx.CallAfter(self.gauge.SetValue, min(percent, 100))
+
+            process.wait()
+
+            if process.returncode == 0:
+                wx.CallAfter(self.log.SetLabel, f"המרה הושלמה: {output_file}")
+                wx.CallAfter(self.gauge.SetValue, 100)
+            else:
+                wx.CallAfter(self.log.SetLabel, "שגיאה בהמרה.")
         except Exception as e:
-            self.log.SetLabel(str(e))
+            wx.CallAfter(self.log.SetLabel, str(e))
 
 if __name__ == "__main__":
     app = wx.App(False)
