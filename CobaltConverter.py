@@ -50,7 +50,7 @@ class CobaltConverter(wx.Frame):
         vbox.Add(self.log, flag=wx.EXPAND | wx.ALL, border=10)
 
         # Footer
-        self.footer = wx.StaticText(panel, label="CobaltConverter V0.3 by Ashi Vered")
+        self.footer = wx.StaticText(panel, label="CobaltConverter V0.4 by Ashi Vered")
         vbox.Add(self.footer, flag=wx.ALIGN_CENTER | wx.BOTTOM, border=10)
 
         panel.SetSizer(vbox)
@@ -71,6 +71,9 @@ class CobaltConverter(wx.Frame):
             self.format_choice.SetItems([])
         if self.format_choice.GetItems():
             self.format_choice.SetSelection(0)
+            # Reset progress bar and log when new file is selected
+            self.gauge.SetValue(0)
+            self.log.SetLabel("")
 
     def on_convert(self, event):
         input_file = self.file_picker.GetPath()
@@ -84,13 +87,13 @@ class CobaltConverter(wx.Frame):
             return
 
         output_file = str(pathlib.Path(input_file).with_suffix(f".{output_format}"))
-        ffmpeg_path = os.path.join(os.path.dirname(__file__), "ffmpeg")
+        script_dir = os.path.dirname(__file__)
+        ffmpeg_path = os.path.join(script_dir, "bin", "ffmpeg")
+
 
         if os.name == "nt":
             ffmpeg_path += ".exe"
 
-        # Clean progress
-        self.gauge.SetValue(0)
         self.log.SetLabel("Conversion started...")
 
         thread = threading.Thread(target=self.run_ffmpeg, args=(ffmpeg_path, input_file, output_file))
