@@ -13,6 +13,7 @@ In addition, you need to install wxPython:
 - Support multilanguage
 - Add option to batch conversion
 - Add option to use via right-click
+- Add document covnersion
 
 ### License
 CobaltConverter is under GNU GPL V3.
