@@ -1,1 +1,4 @@
 log.txt
+dist/
+build/
+CobaltConverter.spec

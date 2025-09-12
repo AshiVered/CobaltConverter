@@ -4,11 +4,21 @@ import subprocess
 import pathlib
 import threading
 import re
+import sys
 
 # Supported formats
 VIDEO_FORMATS = ["mp4", "mkv", "avi", "mov", "webm", "flv", "wmv"]
 AUDIO_FORMATS = ["mp3", "aac", "wav", "flac", "ogg", "m4a"]
 IMAGE_FORMATS = ["jpg", "jpeg", "png", "bmp", "gif", "tiff", "webp"]
+
+def get_base_path():
+    if getattr(sys, 'frozen', False):
+        # if it's exe
+        # sys.executable
+        return os.path.dirname(sys.executable)
+    else:
+        # if it's py script
+        return os.path.dirname(os.path.abspath(__file__))
 
 class CobaltConverter(wx.Frame):
     def __init__(self):
@@ -50,7 +60,7 @@ class CobaltConverter(wx.Frame):
         vbox.Add(self.log, flag=wx.EXPAND | wx.ALL, border=10)
 
         # Footer
-        self.footer = wx.StaticText(panel, label="CobaltConverter V0.4 by Ashi Vered")
+        self.footer = wx.StaticText(panel, label="CobaltConverter V0.4.1 by Ashi Vered")
         vbox.Add(self.footer, flag=wx.ALIGN_CENTER | wx.BOTTOM, border=10)
 
         panel.SetSizer(vbox)
@@ -87,8 +97,8 @@ class CobaltConverter(wx.Frame):
             return
 
         output_file = str(pathlib.Path(input_file).with_suffix(f".{output_format}"))
-        script_dir = os.path.dirname(__file__)
-        ffmpeg_path = os.path.join(script_dir, "bin", "ffmpeg")
+        base_path = get_base_path()
+        ffmpeg_path = os.path.join(base_path, "bin", "ffmpeg")
 
 
         if os.name == "nt":
@@ -102,6 +112,8 @@ class CobaltConverter(wx.Frame):
     def run_ffmpeg(self, ffmpeg_path, input_file, output_file):
         log_path = os.path.join(os.path.dirname(__file__), "log.txt")
         try:
+            CREATE_NO_WINDOW = 0x08000000 
+
             with open(log_path, "a", encoding="utf-8") as log_file:
                 log_file.write(f"=== Conversion started ===\nInput file: {input_file}\nOutput file: {output_file}\n")
 
@@ -112,7 +124,8 @@ class CobaltConverter(wx.Frame):
                             stdout=subprocess.PIPE,
                             text=True,
                             encoding="utf-8",
-                            errors="ignore")
+                            errors="ignore",
+                            creationflags=CREATE_NO_WINDOW)
                 log_file.write(result.stderr + "\n")
 
                 duration_match = re.search(r"Duration: (\d+):(\d+):(\d+\.\d+)", result.stderr)
@@ -129,7 +142,8 @@ class CobaltConverter(wx.Frame):
                                text=True,
                                encoding="utf-8",
                                errors="ignore",
-                               universal_newlines=True)
+                               universal_newlines=True,
+                               creationflags=CREATE_NO_WINDOW)
 
                 for line in process.stderr:
                     log_file.write(line)
