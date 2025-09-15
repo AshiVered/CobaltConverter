@@ -14,7 +14,10 @@ In addition, you need to install wxPython:
 - Add option to batch conversion
 - Add option to use via right-click
 - Add document covnersion
+- Add all FFMPEG supported formats
+- Add option to select path to save converted file
 
 ### License
 CobaltConverter is under GNU GPL V3.
 FFmpeg is an external dependency developed by another developer, and it is subject to its own license.
+
