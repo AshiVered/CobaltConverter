@@ -16,7 +16,7 @@ In addition, you need to install wxPython:
 - Add document conversion
 - Add support for all FFMPEG-supported formats
 - Add option to select path to save converted file
-- Set gif as video
+- ~Set gif as video~ DONE! in V0.4.3
 - Add "stop" button
 
 ### License

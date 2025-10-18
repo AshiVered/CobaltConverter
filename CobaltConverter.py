@@ -6,9 +6,9 @@ import threading
 import re
 import sys
 
-VIDEO_FORMATS = ["mp4", "mkv", "avi", "mov", "webm", "flv", "wmv"]
+VIDEO_FORMATS = ["mp4", "mkv", "avi", "mov", "webm", "flv", "wmv", "gif"]
 AUDIO_FORMATS = ["mp3", "aac", "wav", "flac", "ogg", "m4a"]
-IMAGE_FORMATS = ["jpg", "jpeg", "png", "bmp", "gif", "tiff", "webp"]
+IMAGE_FORMATS = ["jpg", "jpeg", "png", "bmp", "tiff", "webp"]
 
 def get_base_path():
     if getattr(sys, 'frozen', False):
@@ -49,7 +49,7 @@ class CobaltConverter(wx.Frame):
         self.log = wx.StaticText(panel, label="")
         vbox.Add(self.log, flag=wx.EXPAND | wx.ALL, border=10)
 
-        self.footer = wx.StaticText(panel, label="CobaltConverter V0.4.2 by Ashi Vered")
+        self.footer = wx.StaticText(panel, label="CobaltConverter V0.4.3 by Ashi Vered")
         vbox.Add(self.footer, flag=wx.ALIGN_CENTER | wx.BOTTOM, border=10)
 
         panel.SetSizer(vbox)
@@ -119,7 +119,7 @@ class CobaltConverter(wx.Frame):
     def handle_unsupported_file(self, file, old_format, ffmpeg_path):
         basename = os.path.basename(file)
         dlg = wx.SingleChoiceDialog(self,
-                                    f"הקובץ {basename} לא תומך בפורמט {old_format}\nבחר פורמט חדש להמרה:",
+                                    f"The file {basename} can't be converted to {old_format}\n Select a new format:",
                                     "Unsupported format",
                                     IMAGE_FORMATS + AUDIO_FORMATS + VIDEO_FORMATS)
         if dlg.ShowModal() == wx.ID_OK:
