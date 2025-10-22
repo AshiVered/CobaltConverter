@@ -155,6 +155,20 @@ class CobaltConverter(QMainWindow):
         self.signals.finished.connect(self.conversion_finished)
         self.signals.file_progress.connect(self.update_file_progress)
     
+    def check_existing_files(self, output_format):
+        """Check which output files already exist."""
+        existing_files = []
+        for file in self.files:
+            if self.output_folder:
+                output_filename = pathlib.Path(file).stem + f".{output_format}"
+                output_file = os.path.join(self.output_folder, output_filename)
+            else:
+                output_file = str(pathlib.Path(file).with_suffix(f".{output_format}"))
+            
+            if os.path.exists(output_file):
+                existing_files.append(output_file)
+        return existing_files
+    
     def get_ffmpeg_path(self):
         """Get FFmpeg path, checking multiple locations."""
         # If user has specified a custom path
@@ -181,9 +195,17 @@ class CobaltConverter(QMainWindow):
     
     def toggle_output_folder(self, state):
         """Enable/disable output folder selection."""
-        enabled = state == Qt.Checked
+        enabled = state == 2  # Qt.Checked is 2
+        
+        # Update the widgets
         self.output_folder_edit.setEnabled(enabled)
+        self.output_folder_edit.setReadOnly(not enabled)
         self.browse_output_btn.setEnabled(enabled)
+        
+        # Force visual update
+        self.output_folder_edit.update()
+        self.browse_output_btn.update()
+        
         if not enabled:
             self.output_folder = None
             self.output_folder_edit.clear()
@@ -197,13 +219,18 @@ class CobaltConverter(QMainWindow):
     
     def dragEnterEvent(self, event: QDragEnterEvent):
         """Handle drag enter event."""
-        if event.mimeData().hasUrls():
+        if event.mimeData().hasUrls() and not self.is_converting:
             event.acceptProposedAction()
+        else:
+            event.ignore()
     
     def dropEvent(self, event: QDropEvent):
         """Handle drop event."""
-        files = [url.toLocalFile() for url in event.mimeData().urls()]
-        self.add_files(files)
+        if not self.is_converting:
+            files = [url.toLocalFile() for url in event.mimeData().urls()]
+            self.add_files(files)
+        else:
+            event.ignore()
     
     def select_files(self):
         """Open file dialog to select files."""
@@ -213,12 +240,21 @@ class CobaltConverter(QMainWindow):
     
     def add_files(self, files):
         """Add files to the conversion list."""
+        # Prevent adding files during conversion
+        if self.is_converting:
+            QMessageBox.warning(self, "Conversion in Progress", 
+                              "Cannot add files while conversion is running.\n"
+                              "Please wait for the current conversion to finish.")
+            return
+        
         for file in files:
             if file not in self.files and os.path.isfile(file):
                 self.files.append(file)
                 self.file_list.addItem(os.path.basename(file))
         
         if self.files:
+            # Reset progress bar when new files are added (only when not converting)
+            self.progress_bar.setValue(0)
             self.update_format_options()
             self.status_label.setText(f"{len(self.files)} file(s) selected")
     
@@ -238,6 +274,9 @@ class CobaltConverter(QMainWindow):
         if not self.files:
             return
         
+        # Preserve current selection
+        current_selection = self.format_combo.currentText()
+        
         first_ext = pathlib.Path(self.files[0]).suffix.lower().lstrip(".")
         
         if first_ext in VIDEO_FORMATS:
@@ -251,6 +290,10 @@ class CobaltConverter(QMainWindow):
         
         self.format_combo.clear()
         self.format_combo.addItems(formats)
+        
+        # Restore selection if it's still valid
+        if current_selection and current_selection in formats:
+            self.format_combo.setCurrentText(current_selection)
     
     def start_conversion(self):
         """Start the conversion process."""
@@ -283,6 +326,22 @@ class CobaltConverter(QMainWindow):
             else:
                 return
         
+        # Check for existing files before starting conversion
+        output_format = self.format_combo.currentText()
+        existing_files = self.check_existing_files(output_format)
+        
+        if existing_files:
+            reply = QMessageBox.question(
+                self, "Files Already Exist",
+                f"The following files already exist and will be skipped:\n\n" +
+                "\n".join([f"• {os.path.basename(f)}" for f in existing_files]) +
+                f"\n\nDo you want to continue with the remaining {len(self.files) - len(existing_files)} file(s)?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.Yes
+            )
+            if reply == QMessageBox.No:
+                return
+        
         self.is_converting = True
         self.stop_requested = False
         self.convert_btn.setEnabled(False)
@@ -291,7 +350,6 @@ class CobaltConverter(QMainWindow):
         self.clear_btn.setEnabled(False)
         self.progress_bar.setValue(0)
         
-        output_format = self.format_combo.currentText()
         thread = threading.Thread(target=self.convert_all, args=(output_format,), daemon=True)
         thread.start()
     
@@ -314,10 +372,12 @@ class CobaltConverter(QMainWindow):
             self.signals.finished.emit()
             return
         
+        # Create a snapshot of files to convert (prevents issues if files are added during conversion)
+        files_to_convert = self.files.copy()
         unsupported = []
-        total = len(self.files)
+        total = len(files_to_convert)
         
-        for idx, file in enumerate(self.files, 1):
+        for idx, file in enumerate(files_to_convert, 1):
             if self.stop_requested:
                 break
             
@@ -335,9 +395,25 @@ class CobaltConverter(QMainWindow):
                 unsupported.append(file)
                 continue
             
-            self.signals.file_progress.emit(idx, total)
+            # Check for overwrite before starting conversion
+            if self.output_folder:
+                output_filename = pathlib.Path(file).stem + f".{output_format}"
+                output_file = os.path.join(self.output_folder, output_filename)
+            else:
+                output_file = str(pathlib.Path(file).with_suffix(f".{output_format}"))
+            
+            if os.path.exists(output_file):
+                # Skip file if it exists (we'll handle overwrite in main thread later)
+                self.signals.status.emit(f"Skipped {os.path.basename(file)} - file exists")
+                continue
+            
+            # Only emit file progress when actually starting the file conversion
             self.signals.status.emit(f"Converting {os.path.basename(file)} ({idx}/{total})...")
-            self.run_ffmpeg(ffmpeg_path, file, output_format)
+            self.run_ffmpeg_conversion(ffmpeg_path, file, output_file, output_format)
+            
+            # Emit file progress after the file is actually processed
+            if not self.stop_requested:
+                self.signals.file_progress.emit(idx, total)
         
         if not self.stop_requested:
             self.signals.status.emit("All conversions completed!")
@@ -345,18 +421,9 @@ class CobaltConverter(QMainWindow):
         
         self.signals.finished.emit()
     
-    def run_ffmpeg(self, ffmpeg_path, input_file, output_format):
-        """Run FFmpeg conversion for a single file."""
-        if self.stop_requested:
-            return
-        
-        # Determine output file path
-        if self.output_folder:
-            output_filename = pathlib.Path(input_file).stem + f".{output_format}"
-            output_file = os.path.join(self.output_folder, output_filename)
-        else:
-            output_file = str(pathlib.Path(input_file).with_suffix(f".{output_format}"))
-        
+    
+    def run_ffmpeg_conversion(self, ffmpeg_path, input_file, output_file, output_format):
+        """Run the actual FFmpeg conversion."""
         # Get duration
         duration_cmd = [ffmpeg_path, "-i", input_file]
         result = subprocess.run(duration_cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE,
@@ -404,6 +471,7 @@ class CobaltConverter(QMainWindow):
         """Update progress for multiple files."""
         overall_progress = int((current / total) * 100)
         self.progress_bar.setValue(overall_progress)
+    
     
     def conversion_finished(self):
         """Handle conversion completion."""
