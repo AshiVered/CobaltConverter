@@ -1,3 +1,4 @@
+# CobaltConverter_wx.py
 import sys
 import os
 import subprocess
@@ -5,19 +6,14 @@ import pathlib
 import threading
 import re
 import locale
-from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
-                               QHBoxLayout, QLabel, QPushButton, QComboBox,
-                               QProgressBar, QFileDialog, QListWidget, QMessageBox,
-                               QCheckBox, QLineEdit, QDialog, QDialogButtonBox, QListWidgetItem)
-from PySide6.QtCore import Qt, Signal, QObject, QSize
-from PySide6.QtGui import QDragEnterEvent, QDropEvent
+import wx
 
 # --- LOCALIZATION ---
 LANGUAGES = {
     "en": {
         # Window & Footer
         "window_title": "CobaltConverter",
-        "footer": "CobaltConverter v0.5.2 by Ashi Vered",
+        "footer": "CobaltConverter v0.5.3 by Ashi Vered",
         "language_label": "Language:",
         # Main UI
         "select_files_btn": "Select Files",
@@ -61,7 +57,7 @@ LANGUAGES = {
     "he": {
         # Window & Footer
         "window_title": "CobaltConverter",
-        "footer": "CobaltConverter v0.5.2 מאת אשי ורד",
+        "footer": "CobaltConverter v0.5.3 מאת אשי ורד",
         "language_label": "שפה:",
         # Main UI
         "select_files_btn": "בחר קבצים",
@@ -132,27 +128,23 @@ IMAGE_FORMATS = ["jpg", "jpeg", "png", "bmp", "tiff", "webp"]
 # --- UTILITY FUNCTIONS ---
 def detect_system_language():
     """
-    Detects the system language without changing the application's locale,
-    making it safe for use with GUI toolkits like Qt.
+    Detects the system language without changing the application's locale.
     """
     # For Windows
     if sys.platform == 'win32':
         try:
             import ctypes
             windll = ctypes.windll.kernel32
-            # Get language ID and map it to a language name
             lcid = windll.GetUserDefaultUILanguage()
             lang_name = locale.windows_locale.get(lcid)
             if lang_name:
                 primary_lang = lang_name.split('_')[0].lower()
                 if primary_lang in LANGUAGES:
                     return primary_lang
-        except (ImportError, AttributeError, KeyError):
+        except Exception:
             pass
-    # For macOS and Linux
     else:
         try:
-            # Check standard environment variables
             lang_code = os.environ.get('LANG')
             if lang_code:
                 primary_lang = lang_code.split('_')[0].lower()
@@ -160,8 +152,6 @@ def detect_system_language():
                     return primary_lang
         except Exception:
             pass
-
-    # Default to English if detection fails
     return 'en'
 
 def get_base_path():
@@ -179,46 +169,54 @@ def get_file_type(file_path):
     if ext in IMAGE_FORMATS: return 'image'
     return 'unknown'
 
-# --- WORKER SIGNALS ---
-class WorkerSignals(QObject):
-    progress = Signal(int)
-    status = Signal(str)
-    finished = Signal()
-    file_progress = Signal(int, int)
-    request_user_choice = Signal(str, list)
+# --- Drag & Drop Target ---
+class FileDropTarget(wx.FileDropTarget):
+    def __init__(self, parent):
+        super().__init__()
+        self.parent = parent
 
-# --- INCOMPATIBLE FILE DIALOG ---
-class IncompatibleFileDialog(QDialog):
-    def __init__(self, filename, formats, translator, parent=None):
-        super().__init__(parent)
+    def OnDropFiles(self, x, y, filenames):
+        if not self.parent.is_converting:
+            self.parent.add_files(filenames)
+            return True
+        return False
+
+# --- Incompatible File Dialog (wx) ---
+class IncompatibleFileDialog(wx.Dialog):
+    def __init__(self, parent, filename, formats, translator):
+        title = translator.get("incompatible_file_dialog_title")
+        super().__init__(parent, title=title, style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER)
         self.translator = translator
-        self.setWindowTitle(self.translator.get("incompatible_file_dialog_title"))
+        self.selected = None
+        self._build_ui(filename, formats)
 
-        layout = QVBoxLayout(self)
+    def _build_ui(self, filename, formats):
+        s = wx.BoxSizer(wx.VERTICAL)
         base_name = os.path.basename(filename)
-        message_text = self.translator.get("incompatible_file_message", filename=base_name)
-        message = QLabel(message_text)
-        layout.addWidget(message)
+        msg = self.translator.get("incompatible_file_message", filename=base_name)
+        lbl = wx.StaticText(self, label=msg)
+        s.Add(lbl, 0, wx.ALL|wx.EXPAND, 8)
 
-        self.format_combo = QComboBox()
-        self.format_combo.addItems(formats)
-        layout.addWidget(self.format_combo)
+        self.combo = wx.ComboBox(self, choices=formats, style=wx.CB_READONLY)
+        if formats:
+            self.combo.SetSelection(0)
+        s.Add(self.combo, 0, wx.ALL|wx.EXPAND, 8)
 
-        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        self.button_box.accepted.connect(self.accept)
-        self.button_box.rejected.connect(self.reject)
-        layout.addWidget(self.button_box)
+        btns = self.CreateSeparatedButtonSizer(wx.OK|wx.CANCEL)
+        s.Add(btns, 0, wx.ALL|wx.EXPAND, 8)
+
+        self.SetSizerAndFit(s)
 
     def get_selected_format(self):
-        return self.format_combo.currentText()
+        return self.combo.GetValue()
 
-# --- MAIN APPLICATION ---
-class CobaltConverter(QMainWindow):
+# --- MAIN APPLICATION FRAME ---
+class CobaltConverterFrame(wx.Frame):
     def __init__(self):
-        super().__init__()
-        self.setMinimumSize(650, 450)
+        super().__init__(None, title="CobaltConverter", size=(700, 520))
+        self.SetMinSize((650, 450))
 
-        # State and services
+        # state
         self.files = []
         self.is_converting = False
         self.stop_requested = False
@@ -227,256 +225,275 @@ class CobaltConverter(QMainWindow):
         self.custom_ffmpeg_path = None
         self.translator = Translator()
 
-        # Threading sync
+        # dialog synchronization
         self.dialog_event = threading.Event()
         self.dialog_result = None
 
-        self.init_ui()
-        self.setAcceptDrops(True)
+        self._build_ui()
+        self.SetDropTarget(FileDropTarget(self))
 
-        # --- Language Detection and Initialization ---
-        detected_lang_code = detect_system_language()
+        # language initialization
+        detected = detect_system_language()
+        display = 'עברית' if detected == 'he' else 'English'
+        # set combobox
+        self.language_choice.SetStringSelection(display)
+        self.change_language(display)
 
-        if detected_lang_code == 'he':
-            lang_display_name = 'עברית'
-        else:
-            lang_display_name = 'English'
+        # Center and show
+        self.Centre()
+        self.Show()
 
-        self.language_combo.blockSignals(True)
-        self.language_combo.setCurrentText(lang_display_name)
-        self.language_combo.blockSignals(False)
+    def _build_ui(self):
+        panel = wx.Panel(self)
+        main_sizer = wx.BoxSizer(wx.VERTICAL)
+        panel.SetSizer(main_sizer)
+        main_sizer.SetMinSize((600, 400))
 
-        self.change_language(lang_display_name)
+        # Top bar: select, clear, language
+        top_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.select_btn = wx.Button(panel)
+        self.select_btn.Bind(wx.EVT_BUTTON, lambda e: self.select_files())
+        top_sizer.Add(self.select_btn, 0, wx.RIGHT, 6)
 
-    def init_ui(self):
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        layout = QVBoxLayout(central_widget)
-        layout.setSpacing(10)
-        layout.setContentsMargins(15, 15, 15, 15)
+        self.clear_btn = wx.Button(panel)
+        self.clear_btn.Bind(wx.EVT_BUTTON, lambda e: self.clear_files())
+        top_sizer.Add(self.clear_btn, 0, wx.RIGHT, 6)
 
-        # --- Top Bar (File Selection & Language) ---
-        top_bar_layout = QHBoxLayout()
-        self.select_btn = QPushButton()
-        self.select_btn.clicked.connect(self.select_files)
-        top_bar_layout.addWidget(self.select_btn)
+        top_sizer.AddStretchSpacer(1)
 
-        self.clear_btn = QPushButton()
-        self.clear_btn.clicked.connect(self.clear_files)
-        top_bar_layout.addWidget(self.clear_btn)
+        self.language_label = wx.StaticText(panel)
+        top_sizer.Add(self.language_label, 0, wx.ALIGN_CENTER_VERTICAL|wx.RIGHT, 6)
+        self.language_choice = wx.ComboBox(panel, choices=["English", "עברית"], style=wx.CB_READONLY)
+        self.language_choice.Bind(wx.EVT_COMBOBOX, lambda e: self.change_language(self.language_choice.GetValue()))
+        top_sizer.Add(self.language_choice, 0)
 
-        top_bar_layout.addStretch()
+        main_sizer.Add(top_sizer, 0, wx.EXPAND|wx.ALL, 8)
 
-        self.language_label = QLabel()
-        top_bar_layout.addWidget(self.language_label)
-        self.language_combo = QComboBox()
-        self.language_combo.addItems(["English", "עברית"])
-        self.language_combo.currentTextChanged.connect(self.change_language)
-        top_bar_layout.addWidget(self.language_combo)
+        # File list area - scrolled window with item panels
+        self.scroll = wx.ScrolledWindow(panel, style=wx.VSCROLL)
+        self.scroll.SetScrollRate(5, 5)
+        self.list_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.scroll.SetSizer(self.list_sizer)
+        self.list_sizer.AddStretchSpacer(1)
+        main_sizer.Add(self.scroll, 1, wx.EXPAND|wx.LEFT|wx.RIGHT, 8)
 
-        layout.addLayout(top_bar_layout)
+        # drag hint
+        self.drag_hint = wx.StaticText(panel)
+        self.drag_hint.Wrap(600)
+        self.drag_hint.SetForegroundColour(wx.Colour(128,128,128))
+        main_sizer.Add(self.drag_hint, 0, wx.EXPAND|wx.ALL, 6)
 
-        # --- File List ---
-        self.file_list = QListWidget()
-        self.file_list.setAlternatingRowColors(True)
-        layout.addWidget(self.file_list)
+        # Output folder selection
+        out_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.use_custom_output = wx.CheckBox(panel)
+        self.use_custom_output.Bind(wx.EVT_CHECKBOX, self.toggle_output_folder)
+        out_sizer.Add(self.use_custom_output, 0, wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, 6)
 
-        self.drag_hint = QLabel()
-        self.drag_hint.setAlignment(Qt.AlignCenter)
-        self.drag_hint.setStyleSheet("color: gray; font-style: italic;")
-        layout.addWidget(self.drag_hint)
+        self.output_folder_edit = wx.TextCtrl(panel)
+        self.output_folder_edit.Enable(False)
+        out_sizer.Add(self.output_folder_edit, 1, wx.ALIGN_CENTER_VERTICAL|wx.RIGHT, 6)
 
-        # --- Output Folder Selection ---
-        output_layout = QHBoxLayout()
-        self.use_custom_output = QCheckBox()
-        self.use_custom_output.stateChanged.connect(self.toggle_output_folder)
-        output_layout.addWidget(self.use_custom_output)
+        self.browse_output_btn = wx.Button(panel)
+        self.browse_output_btn.Bind(wx.EVT_BUTTON, lambda e: self.select_output_folder())
+        self.browse_output_btn.Enable(False)
+        out_sizer.Add(self.browse_output_btn, 0)
 
-        self.output_folder_edit = QLineEdit()
-        self.output_folder_edit.setEnabled(False)
-        output_layout.addWidget(self.output_folder_edit)
+        main_sizer.Add(out_sizer, 0, wx.EXPAND|wx.ALL, 8)
 
-        self.browse_output_btn = QPushButton()
-        self.browse_output_btn.clicked.connect(self.select_output_folder)
-        self.browse_output_btn.setEnabled(False)
-        output_layout.addWidget(self.browse_output_btn)
-        layout.addLayout(output_layout)
+        # Format selection
+        format_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.format_label = wx.StaticText(panel)
+        format_sizer.Add(self.format_label, 0, wx.ALIGN_CENTER_VERTICAL|wx.RIGHT, 6)
+        self.format_combo = wx.ComboBox(panel, choices=[], style=wx.CB_READONLY)
+        self.format_combo.SetMinSize((150, -1))
+        format_sizer.Add(self.format_combo, 0, wx.RIGHT, 6)
+        format_sizer.AddStretchSpacer(1)
+        main_sizer.Add(format_sizer, 0, wx.EXPAND|wx.LEFT|wx.RIGHT|wx.TOP, 8)
 
-        # --- Format Selection ---
-        format_layout = QHBoxLayout()
-        self.format_label = QLabel()
-        format_layout.addWidget(self.format_label)
+        # Progress and status
+        self.progress_bar = wx.Gauge(panel, range=100)
+        main_sizer.Add(self.progress_bar, 0, wx.EXPAND|wx.ALL, 8)
+        self.status_label = wx.StaticText(panel, label="")
+        main_sizer.Add(self.status_label, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 8)
 
-        self.format_combo = QComboBox()
-        self.format_combo.setMinimumWidth(150)
-        format_layout.addWidget(self.format_combo)
-        format_layout.addStretch()
-        layout.addLayout(format_layout)
+        # Action buttons
+        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.convert_btn = wx.Button(panel)
+        self.convert_btn.Bind(wx.EVT_BUTTON, lambda e: self.start_conversion())
+        self.convert_btn.SetMinSize((-1, 35))
+        btn_sizer.Add(self.convert_btn, 0, wx.RIGHT, 6)
 
-        # --- Progress & Status ---
-        self.progress_bar = QProgressBar()
-        layout.addWidget(self.progress_bar)
-        self.status_label = QLabel()
-        self.status_label.setWordWrap(True)
-        layout.addWidget(self.status_label)
+        self.stop_btn = wx.Button(panel)
+        self.stop_btn.Bind(wx.EVT_BUTTON, lambda e: self.stop_conversion())
+        self.stop_btn.Enable(False)
+        self.stop_btn.SetMinSize((-1, 35))
+        btn_sizer.Add(self.stop_btn, 0)
 
-        # --- Action Buttons ---
-        button_layout = QHBoxLayout()
-        self.convert_btn = QPushButton()
-        self.convert_btn.clicked.connect(self.start_conversion)
-        self.convert_btn.setMinimumHeight(35)
-        button_layout.addWidget(self.convert_btn)
+        main_sizer.Add(btn_sizer, 0, wx.ALIGN_LEFT|wx.ALL, 8)
 
-        self.stop_btn = QPushButton()
-        self.stop_btn.clicked.connect(self.stop_conversion)
-        self.stop_btn.setEnabled(False)
-        self.stop_btn.setMinimumHeight(35)
-        button_layout.addWidget(self.stop_btn)
-        layout.addLayout(button_layout)
+        # Footer
+        footer_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.footer_label = wx.StaticText(panel)
+        self.footer_label.SetForegroundColour(wx.Colour(128,128,128))
+        footer_sizer.AddStretchSpacer(1)
+        footer_sizer.Add(self.footer_label, 0, wx.ALIGN_CENTER_VERTICAL)
+        footer_sizer.AddStretchSpacer(1)
+        main_sizer.Add(footer_sizer, 0, wx.EXPAND|wx.ALL, 4)
 
-        # --- Footer ---
-        footer_layout = QHBoxLayout()
-        self.footer_label = QLabel()
-        self.footer_label.setAlignment(Qt.AlignCenter)
-        self.footer_label.setStyleSheet("color: gray; font-size: 10px;")
-        footer_layout.addWidget(self.footer_label)
-        layout.addLayout(footer_layout)
 
-        # --- Signals ---
-        self.signals = WorkerSignals()
-        self.signals.progress.connect(self.update_progress)
-        self.signals.status.connect(self.update_status)
-        self.signals.finished.connect(self.conversion_finished)
-        self.signals.file_progress.connect(self.update_file_progress)
-        self.signals.request_user_choice.connect(self.prompt_for_new_format)
 
-    # --- LANGUAGE & UI ---
+        # initial text set via translator
+        self.retranslate_ui()
+
+    # --- Language & UI updates ---
     def change_language(self, lang_name):
         lang_code = 'he' if lang_name == 'עברית' else 'en'
         self.translator.set_language(lang_code)
-
-        if lang_code == 'he':
-            QApplication.instance().setLayoutDirection(Qt.RightToLeft)
-        else:
-            QApplication.instance().setLayoutDirection(Qt.LeftToRight)
-
+        # layout direction
+        try:
+            if lang_code == 'he':
+                self.SetLayoutDirection(wx.Layout_RightToLeft)
+            else:
+                self.SetLayoutDirection(wx.Layout_LeftToRight)
+        except Exception:
+            # not all wx versions support SetLayoutDirection; ignore if not available
+            pass
         self.retranslate_ui()
+        self.Layout()
 
     def retranslate_ui(self):
-        self.setWindowTitle(self.translator.get("window_title"))
-        self.select_btn.setText(self.translator.get("select_files_btn"))
-        self.clear_btn.setText(self.translator.get("clear_btn"))
-        self.drag_hint.setText(self.translator.get("drag_drop_hint"))
-        self.use_custom_output.setText(self.translator.get("custom_output_checkbox"))
-        self.output_folder_edit.setPlaceholderText(self.translator.get("output_folder_placeholder"))
-        self.browse_output_btn.setText(self.translator.get("browse_btn"))
-        self.format_label.setText(self.translator.get("convert_to_label"))
-        self.convert_btn.setText(self.translator.get("convert_now_btn"))
-        self.stop_btn.setText(self.translator.get("stop_btn"))
-        self.footer_label.setText(self.translator.get("footer"))
-        self.language_label.setText(self.translator.get("language_label"))
+        t = self.translator
+        self.SetTitle(t.get("window_title"))
+        self.select_btn.SetLabel(t.get("select_files_btn"))
+        self.clear_btn.SetLabel(t.get("clear_btn"))
+        self.drag_hint.SetLabel(t.get("drag_drop_hint"))
+        self.use_custom_output.SetLabel(t.get("custom_output_checkbox"))
+        self.output_folder_edit.SetHint(t.get("output_folder_placeholder"))
+        self.browse_output_btn.SetLabel(t.get("browse_btn"))
+        self.format_label.SetLabel(t.get("convert_to_label"))
+        self.convert_btn.SetLabel(t.get("convert_now_btn"))
+        self.stop_btn.SetLabel(t.get("stop_btn"))
+        self.footer_label.SetLabel(t.get("footer"))
+        self.language_label.SetLabel(t.get("language_label"))
 
-        if not self.is_converting and self.status_label.text() in [LANGUAGES['en']['status_ready'], LANGUAGES['he']['status_ready'], ""]:
-            self.status_label.setText(self.translator.get("status_ready"))
+        if not self.is_converting and (self.status_label.GetLabel() in [LANGUAGES['en']['status_ready'], LANGUAGES['he']['status_ready'], ""]):
+            self.status_label.SetLabel(t.get("status_ready"))
 
     # --- FILE HANDLING ---
     def select_files(self):
         title = self.translator.get("select_files_dialog_title")
-        files, _ = QFileDialog.getOpenFileNames(self, title, "", "All Files (*.*)")
-        if files: self.add_files(files)
+        with wx.FileDialog(self, message=title, wildcard="All files (*.*)|*.*", style=wx.FD_OPEN|wx.FD_MULTIPLE) as dlg:
+            if dlg.ShowModal() == wx.ID_OK:
+                paths = dlg.GetPaths()
+                self.add_files(paths)
 
     def add_files(self, files_to_add):
         if self.is_converting: return
+        added = False
         for file in files_to_add:
             if file not in self.files and os.path.isfile(file):
                 self.files.append(file)
-                item_widget = QWidget()
-                item_layout = QHBoxLayout(item_widget)
-                item_layout.setContentsMargins(5, 2, 5, 2)
-                item_layout.setSpacing(10)
-
-                filename_label = QLabel(os.path.basename(file))
-                filename_label.setToolTip(file)
-                item_layout.addWidget(filename_label, 1)
-
-                remove_btn = QPushButton("X")
-                remove_btn.setFixedSize(24, 24)
-                remove_btn.setStyleSheet("font-weight: bold; color: red;")
-                remove_btn.clicked.connect(lambda checked, f=file: self.remove_file(f))
-                item_layout.addWidget(remove_btn)
-
-                list_item = QListWidgetItem(self.file_list)
-                list_item.setSizeHint(item_widget.sizeHint())
-                self.file_list.addItem(list_item)
-                self.file_list.setItemWidget(list_item, item_widget)
-
+                self._add_file_item(file)
+                added = True
         if self.files:
             self.update_format_options()
-            self.status_label.setText(self.translator.get("files_selected_status", count=len(self.files)))
+            self.status_label.SetLabel(self.translator.get("files_selected_status", count=len(self.files)))
+        if added:
+            # refresh scrolled window layout
+            self.list_sizer.Layout()
+            self.scroll.FitInside()
 
-    def remove_file(self, file_to_remove):
+    def _add_file_item(self, file_path):
+        # create an item panel with filename and a remove 'X' button
+        panel = wx.Panel(self.scroll)
+        s = wx.BoxSizer(wx.HORIZONTAL)
+        lbl = wx.StaticText(panel, label=os.path.basename(file_path))
+        lbl.SetToolTip(file_path)
+        s.Add(lbl, 1, wx.ALL|wx.EXPAND, 4)
+
+        remove_btn = wx.Button(panel, label="X", size=(28, 24))
+        remove_btn.SetForegroundColour(wx.Colour(255,0,0))
+        # capture file in closure
+        remove_btn.Bind(wx.EVT_BUTTON, lambda ev, f=file_path, p=panel: self.remove_file(f, p))
+        s.Add(remove_btn, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 4)
+        panel.SetSizer(s)
+
+        # store reference by attaching to panel
+        panel.file_path = file_path
+        self.list_sizer.Insert(self.list_sizer.GetItemCount()-1, panel, 0, wx.EXPAND|wx.ALL, 2)
+
+    def remove_file(self, file_to_remove, panel=None):
         if self.is_converting:
-            QMessageBox.warning(self, self.translator.get("cannot_remove_file_title"),
-                                      self.translator.get("cannot_remove_file_message"))
+            wx.MessageBox(self.translator.get("cannot_remove_file_message"), self.translator.get("cannot_remove_file_title"), wx.ICON_WARNING)
             return
         try:
             index = self.files.index(file_to_remove)
             self.files.pop(index)
-            self.file_list.takeItem(index)
-            if self.files:
-                self.status_label.setText(self.translator.get("files_selected_status", count=len(self.files)))
+            # find panel and remove
+            if panel is not None:
+                self.list_sizer.Hide(panel)
+                panel.Destroy()
             else:
-                self.status_label.setText(self.translator.get("status_ready"))
+                # fallback: search panels
+                for child in self.scroll.GetChildren():
+                    if getattr(child, 'file_path', None) == file_to_remove:
+                        child.Destroy()
+                        break
+            if self.files:
+                self.status_label.SetLabel(self.translator.get("files_selected_status", count=len(self.files)))
+            else:
+                self.status_label.SetLabel(self.translator.get("status_ready"))
             self.update_format_options()
+            self.list_sizer.Layout()
+            self.scroll.FitInside()
         except ValueError:
             pass
+
 
     def clear_files(self):
         if self.is_converting: return
         self.files.clear()
-        self.file_list.clear()
-        self.format_combo.clear()
-        self.status_label.setText(self.translator.get("status_ready"))
-        self.progress_bar.setValue(0)
+        # destroy panels
+        for child in list(self.scroll.GetChildren()):
+            if hasattr(child, 'file_path'):
+                child.Destroy()
+        self.format_combo.Clear()
+        self.status_label.SetLabel(self.translator.get("status_ready"))
+        self.progress_bar.SetValue(0)
+        self.list_sizer.Layout()
+        self.scroll.FitInside()
 
     def update_format_options(self):
         if not self.files:
-            self.format_combo.clear()
+            self.format_combo.Clear()
             return
-        current_selection = self.format_combo.currentText()
+        current_selection = self.format_combo.GetValue()
         file_type = get_file_type(self.files[0])
         formats = []
         if file_type == 'video': formats = VIDEO_FORMATS + AUDIO_FORMATS
         elif file_type == 'audio': formats = AUDIO_FORMATS
         elif file_type == 'image': formats = IMAGE_FORMATS
-        self.format_combo.clear()
-        self.format_combo.addItems(formats)
+        self.format_combo.Clear()
+        for f in formats:
+            self.format_combo.Append(f)
         if current_selection and current_selection in formats:
-            self.format_combo.setCurrentText(current_selection)
+            self.format_combo.SetValue(current_selection)
 
-    def toggle_output_folder(self, state):
-        enabled = state == Qt.Checked.value
-        self.output_folder_edit.setEnabled(enabled)
-        self.browse_output_btn.setEnabled(enabled)
+    def toggle_output_folder(self, event):
+        enabled = self.use_custom_output.GetValue()
+        self.output_folder_edit.Enable(enabled)
+        self.browse_output_btn.Enable(enabled)
         if not enabled:
             self.output_folder = None
-            self.output_folder_edit.clear()
+            self.output_folder_edit.SetValue("")
 
     def select_output_folder(self):
         title = self.translator.get("select_output_folder_dialog_title")
-        folder = QFileDialog.getExistingDirectory(self, title)
-        if folder:
-            self.output_folder = folder
-            self.output_folder_edit.setText(folder)
-
-    def dragEnterEvent(self, event: QDragEnterEvent):
-        if event.mimeData().hasUrls() and not self.is_converting:
-            event.acceptProposedAction()
-
-    def dropEvent(self, event: QDropEvent):
-        if not self.is_converting:
-            files = [url.toLocalFile() for url in event.mimeData().urls()]
-            self.add_files(files)
+        with wx.DirDialog(self, message=title) as dlg:
+            if dlg.ShowModal() == wx.ID_OK:
+                folder = dlg.GetPath()
+                self.output_folder = folder
+                self.output_folder_edit.SetValue(folder)
 
     # --- CONVERSION LOGIC ---
     def get_ffmpeg_path(self):
@@ -493,10 +510,10 @@ class CobaltConverter(QMainWindow):
 
     def start_conversion(self):
         if not self.files:
-            QMessageBox.warning(self, self.translator.get("no_files_title"), self.translator.get("no_files_message"))
+            wx.MessageBox(self.translator.get("no_files_message"), self.translator.get("no_files_title"), wx.ICON_WARNING)
             return
-        if not self.format_combo.currentText():
-            QMessageBox.warning(self, self.translator.get("no_format_title"), self.translator.get("no_format_message"))
+        if not self.format_combo.GetValue():
+            wx.MessageBox(self.translator.get("no_format_message"), self.translator.get("no_format_title"), wx.ICON_WARNING)
             return
         if not self.get_ffmpeg_path():
             self.prompt_for_ffmpeg_path()
@@ -504,21 +521,29 @@ class CobaltConverter(QMainWindow):
 
         self.is_converting = True
         self.stop_requested = False
-        self.convert_btn.setEnabled(False); self.stop_btn.setEnabled(True)
-        self.select_btn.setEnabled(False); self.clear_btn.setEnabled(False)
-        self.progress_bar.setValue(0)
+        self.convert_btn.Enable(False)
+        self.stop_btn.Enable(True)
+        self.select_btn.Enable(False)
+        self.clear_btn.Enable(False)
+        self.progress_bar.SetValue(0)
 
-        output_format = self.format_combo.currentText()
+        output_format = self.format_combo.GetValue()
         threading.Thread(target=self.convert_all, args=(output_format,), daemon=True).start()
 
     def stop_conversion(self):
         title = self.translator.get("stop_conversion_title")
         message = self.translator.get("stop_conversion_message")
-        if QMessageBox.question(self, title, message, QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+        dlgres = wx.MessageBox(message, title, wx.YES_NO|wx.ICON_QUESTION)
+        if dlgres == wx.YES:
             self.stop_requested = True
-            if self.current_process: self.current_process.terminate()
-            if not self.dialog_event.is_set(): self.dialog_event.set()
-            self.signals.status.emit(self.translator.get("conversion_stopped_status"))
+            if self.current_process:
+                try:
+                    self.current_process.terminate()
+                except Exception:
+                    pass
+            if not self.dialog_event.is_set():
+                self.dialog_event.set()
+            wx.CallAfter(self._set_status, self.translator.get("conversion_stopped_status"))
 
     def convert_all(self, initial_output_format):
         ffmpeg_path = self.get_ffmpeg_path()
@@ -537,13 +562,17 @@ class CobaltConverter(QMainWindow):
 
             current_output_format = initial_output_format
             if current_output_format not in valid_formats:
-                self.dialog_result, self.dialog_event.clear()
-                self.signals.request_user_choice.emit(file, valid_formats)
+                # prompt user in main thread and wait
+                self.dialog_result = None
+                self.dialog_event.clear()
+                wx.CallAfter(self._show_incompatible_dialog, file, valid_formats)
                 self.dialog_event.wait()
-                if self.dialog_result: current_output_format = self.dialog_result
+                if self.dialog_result:
+                    current_output_format = self.dialog_result
                 else:
-                    self.signals.status.emit(self.translator.get("skipping_incompatible_status", filename=os.path.basename(file)))
-                    processed_count += 1; self.signals.file_progress.emit(processed_count, total_files)
+                    wx.CallAfter(self._set_status, self.translator.get("skipping_incompatible_status", filename=os.path.basename(file)))
+                    processed_count += 1
+                    wx.CallAfter(self._set_file_progress, processed_count, total_files)
                     continue
 
             if self.output_folder:
@@ -553,22 +582,24 @@ class CobaltConverter(QMainWindow):
                 output_file = str(pathlib.Path(file).with_suffix(f".{current_output_format}"))
 
             if os.path.exists(output_file):
-                self.signals.status.emit(self.translator.get("skipping_exists_status", filename=os.path.basename(file)))
-                processed_count += 1; self.signals.file_progress.emit(processed_count, total_files)
+                wx.CallAfter(self._set_status, self.translator.get("skipping_exists_status", filename=os.path.basename(file)))
+                processed_count += 1
+                wx.CallAfter(self._set_file_progress, processed_count, total_files)
                 continue
 
             status_msg = self.translator.get("converting_status", current=processed_count + 1, total=total_files, filename=os.path.basename(file))
-            self.signals.status.emit(status_msg)
+            wx.CallAfter(self._set_status, status_msg)
             self.run_ffmpeg_conversion(ffmpeg_path, file, output_file)
 
             if not self.stop_requested:
                 processed_count += 1
-                self.signals.file_progress.emit(processed_count, total_files)
+                wx.CallAfter(self._set_file_progress, processed_count, total_files)
 
         if not self.stop_requested:
-            self.signals.status.emit(self.translator.get("all_conversions_complete_status"))
-            if total_files > 0: self.signals.progress.emit(100)
-        self.signals.finished.emit()
+            wx.CallAfter(self._set_status, self.translator.get("all_conversions_complete_status"))
+            if total_files > 0:
+                wx.CallAfter(self._set_progress, 100)
+        wx.CallAfter(self._conversion_finished)
 
     def run_ffmpeg_conversion(self, ffmpeg_path, input_file, output_file):
         try:
@@ -581,53 +612,93 @@ class CobaltConverter(QMainWindow):
             self.current_process.wait()
         except Exception as e:
             status_msg = self.translator.get("error_converting_status", filename=os.path.basename(input_file), error=e)
-            self.signals.status.emit(status_msg)
+            wx.CallAfter(self._set_status, status_msg)
         finally:
             self.current_process = None
 
-    # --- SLOTS & EVENT HANDLERS ---
-    def update_progress(self, value): self.progress_bar.setValue(value)
-    def update_status(self, message): self.status_label.setText(message)
-    def update_file_progress(self, current, total):
-        if total > 0: self.progress_bar.setValue(int((current / total) * 100))
+    # --- GUI helper callafters (threads -> UI) ---
+    def _set_progress(self, value): self.progress_bar.SetValue(value)
+    def _set_status(self, message): self.status_label.SetLabel(message)
+    def _set_file_progress(self, current, total):
+        if total > 0:
+            self.progress_bar.SetValue(int((current / total) * 100))
 
-    def conversion_finished(self):
+    def _conversion_finished(self):
         self.is_converting = False
-        self.convert_btn.setEnabled(True); self.stop_btn.setEnabled(False)
-        self.select_btn.setEnabled(True); self.clear_btn.setEnabled(True)
+        self.convert_btn.Enable(True)
+        self.stop_btn.Enable(False)
+        self.select_btn.Enable(True)
+        self.clear_btn.Enable(True)
         self.current_process = None
-        if not self.stop_requested and self.files: self.progress_bar.setValue(100)
+        if not self.stop_requested and self.files:
+            self.progress_bar.SetValue(100)
 
-    def prompt_for_new_format(self, file_path, valid_formats):
-        dialog = IncompatibleFileDialog(file_path, valid_formats, self.translator, self)
-        self.dialog_result = dialog.get_selected_format() if dialog.exec() == QDialog.Accepted else None
+    # --- Dialogs invoked from main thread via wx.CallAfter ---
+    def _show_incompatible_dialog(self, file_path, valid_formats):
+        dlg = IncompatibleFileDialog(self, file_path, valid_formats, self.translator)
+        res = dlg.ShowModal()
+        if res == wx.ID_OK:
+            self.dialog_result = dlg.get_selected_format()
+        else:
+            self.dialog_result = None
+        dlg.Destroy()
+        # signal the worker thread to continue
         self.dialog_event.set()
 
     def prompt_for_ffmpeg_path(self):
         title = self.translator.get("ffmpeg_not_found_title")
         message = self.translator.get("ffmpeg_not_found_message")
-        if QMessageBox.question(self, title, message, QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+        res = wx.MessageBox(message, title, wx.YES_NO|wx.ICON_QUESTION)
+        if res == wx.YES:
             dialog_title = self.translator.get("locate_ffmpeg_dialog_title")
-            file, _ = QFileDialog.getOpenFileName(self, dialog_title)
-            if file and os.path.isfile(file): self.custom_ffmpeg_path = file
+            with wx.FileDialog(self, message=dialog_title, style=wx.FD_OPEN) as filed:
+                if filed.ShowModal() == wx.ID_OK:
+                    file = filed.GetPath()
+                    if file and os.path.isfile(file):
+                        self.custom_ffmpeg_path = file
 
-    def closeEvent(self, event):
+    def closeEvent(self, event=None):
+        # map to wx Close - bind via EVT_CLOSE if needed
         if self.is_converting:
             title = self.translator.get("conversion_in_progress_title")
             message = self.translator.get("conversion_in_progress_message")
-            if QMessageBox.question(self, title, message, QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+            res = wx.MessageBox(message, title, wx.YES_NO|wx.ICON_QUESTION)
+            if res == wx.YES:
                 self.stop_requested = True
-                if self.current_process: self.current_process.terminate()
-                if not self.dialog_event.is_set(): self.dialog_event.set()
-                event.accept()
+                if self.current_process:
+                    try:
+                        self.current_process.terminate()
+                    except Exception:
+                        pass
+                if not self.dialog_event.is_set():
+                    self.dialog_event.set()
+                try:
+                    self.Destroy()
+                except Exception:
+                    pass
             else:
-                event.ignore()
+                return False
         else:
-            event.accept()
+            try:
+                self.Destroy()
+            except Exception:
+                pass
+        return True
 
 # --- APPLICATION ENTRY POINT ---
+def main():
+    app = wx.App(False)
+    frame = CobaltConverterFrame()
+
+    # bind close event
+    def on_close(evt):
+        if not frame.closeEvent():
+            evt.Veto()
+        else:
+            evt.Skip()
+    frame.Bind(wx.EVT_CLOSE, on_close)
+
+    app.MainLoop()
+
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = CobaltConverter()
-    window.show()
-    sys.exit(app.exec())
+    main()
