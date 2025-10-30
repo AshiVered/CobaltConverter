@@ -1,7 +1,7 @@
 # CobaltConverter
 
 **CobaltConverter** is a cross-platform file conversion program built on top of **[FFmpeg](https://ffmpeg.org/)**.  
-FFmpeg is a powerful multimedia toolkit, but it lacks a graphical interface — so **CobaltConverter** provides one using **[PySide6](https://doc.qt.io/qtforpython/)** for a modern and native GUI experience.
+FFmpeg is a powerful multimedia toolkit, but it lacks a graphical interface — so **CobaltConverter** provides one using **[WxPython](https://github.com/wxWidgets/Phoenix)** for a flexible design that adapts itself to the operating system (Windows, Linux, macOS).
 
 ---
 
@@ -25,11 +25,11 @@ You can run the Python source directly on **Linux** or **macOS**, provided FFmpe
 #### Requirements
 - [Python 3.8+](https://www.python.org/downloads/)
 - [FFmpeg](https://ffmpeg.org/download.html)
-- [PySide6](https://pypi.org/project/PySide6/)
+- [WxPython](https://github.com/wxWidgets/Phoenix)
 
-Install PySide6 using pip:
+Install wxPython using pip:
 
-    pip install PySide6
+    pip install wxPython
 
 ---
 
@@ -37,7 +37,7 @@ Install PySide6 using pip:
 
 | Status | Feature |
 |:------:|----------|
-| ⏳ | Support multiple languages |
+| ✅ | Support multiple languages *(done in v0.6)* |
 | ✅ | Add batch conversion *(done in v0.4.2)* |
 | ⏳ | Add option to use via right-click menu |
 | ⏳ | Add document conversion |
@@ -60,4 +60,4 @@ See [LICENSE](LICENSE) for details.
 ## 💬 Credits
 
 - **Main developer:** [Ashi Vered](https://github.com/AshiVered)  
-- **Contributors:** [Yisroel Tech](https://github.com/YisroelTech)
+- **Contributors:** [Yisroel Tech](https://github.com/YisroelTech), [cfopuser](https://github.com/cfopuser)
