@@ -61,7 +61,7 @@ LANGUAGES = {
     "he": {
         # Window & Footer
         "window_title": "CobaltConverter",
-        "footer": "CobaltConverter v0.5.1 מאת אשי ורד",
+        "footer": "CobaltConverter v0.5.2 מאת אשי ורד",
         "language_label": "שפה:",
         # Main UI
         "select_files_btn": "בחר קבצים",
@@ -130,9 +130,6 @@ AUDIO_FORMATS = ["mp3", "aac", "wav", "flac", "ogg", "m4a"]
 IMAGE_FORMATS = ["jpg", "jpeg", "png", "bmp", "tiff", "webp"]
 
 # --- UTILITY FUNCTIONS ---
-# ##################################################################
-# MODIFIED SECTION: Replaced with a safe, OS-specific detection method.
-# ##################################################################
 def detect_system_language():
     """
     Detects the system language without changing the application's locale,
@@ -151,7 +148,6 @@ def detect_system_language():
                 if primary_lang in LANGUAGES:
                     return primary_lang
         except (ImportError, AttributeError, KeyError):
-             # Fallback if ctypes or lookup fails
             pass
     # For macOS and Linux
     else:
@@ -163,14 +159,10 @@ def detect_system_language():
                 if primary_lang in LANGUAGES:
                     return primary_lang
         except Exception:
-            # Fallback if env var parsing fails
             pass
 
     # Default to English if detection fails
     return 'en'
-# ##################################################################
-# END OF MODIFIED SECTION
-# ##################################################################
 
 def get_base_path():
     if getattr(sys, 'frozen', False): return os.path.dirname(sys.executable)
