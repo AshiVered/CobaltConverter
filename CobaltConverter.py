@@ -1,4 +1,3 @@
-# CobaltConverter_wx.py
 import sys
 import os
 import subprocess
@@ -7,103 +6,31 @@ import threading
 import re
 import locale
 import wx
-
-# --- LOCALIZATION ---
-LANGUAGES = {
-    "en": {
-        # Window & Footer
-        "window_title": "CobaltConverter",
-        "footer": "CobaltConverter v0.5.3 by Ashi Vered",
-        "language_label": "Language:",
-        # Main UI
-        "select_files_btn": "Select Files",
-        "clear_btn": "Clear",
-        "drag_drop_hint": "💡 Drag and drop files here",
-        "custom_output_checkbox": "Custom output folder:",
-        "output_folder_placeholder": "Same as source file",
-        "browse_btn": "Browse",
-        "convert_to_label": "Convert to:",
-        "status_ready": "Ready",
-        "convert_now_btn": "Convert Now",
-        "stop_btn": "Stop",
-        # File Handling & Status Messages
-        "files_selected_status": "{count} file(s) selected",
-        "conversion_stopped_status": "Conversion stopped by user",
-        "skipping_exists_status": "Skipping {filename} - file exists",
-        "converting_status": "Converting ({current}/{total}): {filename}...",
-        "all_conversions_complete_status": "All conversions completed!",
-        "error_converting_status": "Error converting {filename}: {error}",
-        # Dialogs & Messages
-        "select_files_dialog_title": "Select Files",
-        "select_output_folder_dialog_title": "Select Output Folder",
-        "cannot_remove_file_title": "Cannot Remove File",
-        "cannot_remove_file_message": "Cannot remove files while a conversion is in progress.",
-        "no_files_title": "No Files",
-        "no_files_message": "Please select files to convert.",
-        "no_format_title": "No Format",
-        "no_format_message": "Please select an output format.",
-        "stop_conversion_title": "Stop Conversion",
-        "stop_conversion_message": "Are you sure you want to stop the conversion?",
-        "ffmpeg_not_found_title": "FFmpeg Not Found",
-        "ffmpeg_not_found_message": "FFmpeg was not found. Would you like to locate it manually?",
-        "locate_ffmpeg_dialog_title": "Locate FFmpeg Executable",
-        "conversion_in_progress_title": "Conversion in Progress",
-        "conversion_in_progress_message": "A conversion is currently running. Do you want to stop it and close?",
-        # Incompatible File Dialog
-        "incompatible_file_dialog_title": "Incompatible File",
-        "incompatible_file_message": "The file '{filename}' does not support the selected format.\nPlease select a new format to convert to:",
-        "skipping_incompatible_status": "Skipping {filename} (Cancelled by user)",
-    },
-    "he": {
-        # Window & Footer
-        "window_title": "CobaltConverter",
-        "footer": "CobaltConverter v0.5.3 מאת אשי ורד",
-        "language_label": "שפה:",
-        # Main UI
-        "select_files_btn": "בחר קבצים",
-        "clear_btn": "נקה",
-        "drag_drop_hint": "💡 גרור ושחרר קבצים לכאן",
-        "custom_output_checkbox": "תיקיית פלט מותאמת אישית:",
-        "output_folder_placeholder": "זהה לקובץ המקור",
-        "browse_btn": "עיון",
-        "convert_to_label": "המר ל:",
-        "status_ready": "מוכן",
-        "convert_now_btn": "המר עכשיו",
-        "stop_btn": "עצור",
-        # File Handling & Status Messages
-        "files_selected_status": "{count} קבצים נבחרו",
-        "conversion_stopped_status": "ההמרה הופסקה על ידי המשתמש",
-        "skipping_exists_status": "מדלג על {filename} - הקובץ קיים",
-        "converting_status": "ממיר ({current}/{total}): {filename}...",
-        "all_conversions_complete_status": "כל ההמרות הושלמו!",
-        "error_converting_status": "שגיאה בהמרת {filename}: {error}",
-        # Dialogs & Messages
-        "select_files_dialog_title": "בחר קבצים",
-        "select_output_folder_dialog_title": "בחר תיקיית פלט",
-        "cannot_remove_file_title": "לא ניתן להסיר קובץ",
-        "cannot_remove_file_message": "לא ניתן להסיר קבצים בזמן שהמרה מתבצעת.",
-        "no_files_title": "לא נבחרו קבצים",
-        "no_files_message": "אנא בחר קבצים להמרה.",
-        "no_format_title": "לא נבחר פורמט",
-        "no_format_message": "אנא בחר פורמט פלט.",
-        "stop_conversion_title": "עצירת המרה",
-        "stop_conversion_message": "האם אתה בטוח שברצונך לעצור את ההמרה?",
-        "ffmpeg_not_found_title": "FFmpeg לא נמצא",
-        "ffmpeg_not_found_message": "FFmpeg לא נמצא. האם תרצה לאתר אותו ידנית?",
-        "locate_ffmpeg_dialog_title": "אתר את קובץ ההפעלה של FFmpeg",
-        "conversion_in_progress_title": "המרה בתהליך",
-        "conversion_in_progress_message": "המרה מתבצעת כעת. האם ברצונך לעצור אותה ולסגור?",
-        # Incompatible File Dialog
-        "incompatible_file_dialog_title": "קובץ לא תואם",
-        "incompatible_file_message": "הקובץ '{filename}' אינו תומך בפורמט שנבחר.\nאנא בחר פורמט חדש להמרה:",
-        "skipping_incompatible_status": "מדלג על {filename} (בוטל על ידי המשתמש)",
-    }
-}
+import json
+import logging
 
 class Translator:
     def __init__(self, initial_language='en'):
         self.language = initial_language
-        self.translations = LANGUAGES
+        self.translations = {}
+        self._load_languages()
+
+    def _load_languages(self):
+        """Loads all JSON language files from the 'Languages' directory."""
+        base_path = os.path.join(get_base_path(), "Languages")
+        if not os.path.exists(base_path):
+            print("Languages directory not found:", base_path)
+            return
+
+        for filename in os.listdir(base_path):
+            if filename.endswith(".json"):
+                lang_code = os.path.splitext(filename)[0].lower()
+                file_path = os.path.join(base_path, filename)
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        self.translations[lang_code] = json.load(f)
+                except Exception as e:
+                    print(f"Error loading {filename}: {e}")
 
     def set_language(self, lang_code):
         if lang_code in self.translations:
@@ -115,9 +42,9 @@ class Translator:
             return template.format(**kwargs) if kwargs else template
         except KeyError:
             try:
-                template = self.translations['en'][key]
+                template = self.translations.get('en', {}).get(key, key)
                 return template.format(**kwargs) if kwargs else template
-            except KeyError:
+            except Exception:
                 return key
 
 # --- FORMATS ---
@@ -157,6 +84,31 @@ def detect_system_language():
 def get_base_path():
     if getattr(sys, 'frozen', False): return os.path.dirname(sys.executable)
     else: return os.path.dirname(os.path.abspath(__file__))
+
+# --- LOGGING CONFIGURATION (set up after get_base_path is available) ---
+def setup_logging():
+    base_path = get_base_path()
+    log_path = os.path.join(base_path, "CobaltConverter.log")
+    try:
+        # אם קיים קובץ לוג ישן — נחליף אותו
+        if os.path.exists(log_path):
+            os.remove(log_path)
+    except Exception:
+        pass
+
+    logging.basicConfig(
+        filename=log_path,
+        filemode="w",
+        level=logging.DEBUG,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        encoding="utf-8"
+    )
+    logging.info(f"Logging initialized. Log file: {log_path}")
+    return log_path
+
+LOG_PATH = setup_logging()
+print("Log file:", LOG_PATH)   # עד שתוודא שהלוג נוצר, ניתן להשאיר את הפקודה הזו
+
 
 def get_subprocess_flags():
     if sys.platform == 'win32': return {'creationflags': 0x08000000}
@@ -376,8 +328,10 @@ class CobaltConverterFrame(wx.Frame):
         self.footer_label.SetLabel(t.get("footer"))
         self.language_label.SetLabel(t.get("language_label"))
 
-        if not self.is_converting and (self.status_label.GetLabel() in [LANGUAGES['en']['status_ready'], LANGUAGES['he']['status_ready'], ""]):
-            self.status_label.SetLabel(t.get("status_ready"))
+        if not self.is_converting:
+            current_status = self.status_label.GetLabel()
+            if current_status in ["", self.translator.get("status_ready")]:
+                self.status_label.SetLabel(self.translator.get("status_ready"))
 
     # --- FILE HANDLING ---
     def select_files(self):
@@ -589,6 +543,7 @@ class CobaltConverterFrame(wx.Frame):
 
             status_msg = self.translator.get("converting_status", current=processed_count + 1, total=total_files, filename=os.path.basename(file))
             wx.CallAfter(self._set_status, status_msg)
+            logging.info("Starting conversion for %s", file)
             self.run_ffmpeg_conversion(ffmpeg_path, file, output_file)
 
             if not self.stop_requested:
@@ -599,22 +554,50 @@ class CobaltConverterFrame(wx.Frame):
             wx.CallAfter(self._set_status, self.translator.get("all_conversions_complete_status"))
             if total_files > 0:
                 wx.CallAfter(self._set_progress, 100)
+        logging.info("All conversions complete.")
         wx.CallAfter(self._conversion_finished)
 
     def run_ffmpeg_conversion(self, ffmpeg_path, input_file, output_file):
         try:
-            cmd = [ffmpeg_path, "-i", input_file, output_file, "-y"]
+            cmd = [ffmpeg_path, "-y", "-i", input_file, output_file]
+            logging.info(f"Running command: {' '.join(cmd)}")
+
             self.current_process = subprocess.Popen(
-                cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE,
-                text=True, encoding="utf-8", errors="ignore",
-                universal_newlines=True, **get_subprocess_flags()
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                encoding="utf-8",
+                errors="ignore",
+                universal_newlines=True,
+                **get_subprocess_flags()
             )
+
+            # קריאה שורה־שורה מפלט FFmpeg (מונעת תקיעה)
+            for line in self.current_process.stdout:
+                line = line.strip()
+                if line:
+                    logging.debug(line)
+                    # אפשר לזהות גם התקדמות
+                    if "frame=" in line or "time=" in line:
+                        wx.CallAfter(self._set_status, f"FFmpeg: {line[:80]}")
+
             self.current_process.wait()
+
+            rc = self.current_process.returncode
+            if rc != 0:
+                logging.error(f"FFmpeg exited with code {rc}")
+                wx.CallAfter(self._set_status, f"שגיאה בהמרת {os.path.basename(input_file)} (קוד {rc})")
+            else:
+                logging.info(f"FFmpeg finished successfully for {input_file}")
+
         except Exception as e:
+            logging.exception(f"Exception during FFmpeg run: {e}")
             status_msg = self.translator.get("error_converting_status", filename=os.path.basename(input_file), error=e)
             wx.CallAfter(self._set_status, status_msg)
         finally:
             self.current_process = None
+
 
     # --- GUI helper callafters (threads -> UI) ---
     def _set_progress(self, value): self.progress_bar.SetValue(value)
