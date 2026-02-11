@@ -52,11 +52,17 @@ class ConversionEngine:
         except FileNotFoundError:
             return None
 
-    def start(self, files: list[str], output_format: str, output_folder: str | None) -> None:
+    def start(
+        self,
+        files: list[str],
+        output_format: str,
+        output_folder: str | None,
+        quality_flags: list[str] | None = None,
+    ) -> None:
         self._stop_requested = False
         threading.Thread(
             target=self._convert_all,
-            args=(files, output_format, output_folder),
+            args=(files, output_format, output_folder, quality_flags or []),
             daemon=True,
         ).start()
 
@@ -68,7 +74,8 @@ class ConversionEngine:
             except OSError:
                 pass
 
-    def _convert_all(self, files: list[str], initial_format: str, output_folder: str | None) -> None:
+    def _convert_all(self, files: list[str], initial_format: str, output_folder: str | None, quality_flags: list[str] | None = None) -> None:
+        quality_flags = quality_flags or []
         ffmpeg_path = self.get_ffmpeg_path()
         total = len(files)
         processed = 0
@@ -93,7 +100,7 @@ class ConversionEngine:
 
             self._status_callback(f"Converting ({processed + 1}/{total}): {os.path.basename(file)}...")
             logging.info("Starting conversion for %s", file)
-            self._run_ffmpeg(ffmpeg_path, file, output_file)
+            self._run_ffmpeg(ffmpeg_path, file, output_file, quality_flags)
 
             if not self._stop_requested:
                 processed += 1
@@ -126,9 +133,9 @@ class ConversionEngine:
             return os.path.join(output_folder, output_filename)
         return str(pathlib.Path(file).with_suffix(f".{output_format}"))
 
-    def _run_ffmpeg(self, ffmpeg_path: str, input_file: str, output_file: str) -> None:
+    def _run_ffmpeg(self, ffmpeg_path: str, input_file: str, output_file: str, quality_flags: list[str] | None = None) -> None:
         try:
-            cmd = [ffmpeg_path, "-y", "-i", input_file, output_file]
+            cmd = [ffmpeg_path, "-y", "-i", input_file] + (quality_flags or []) + [output_file]
             logging.info("Running command: %s", " ".join(cmd))
 
             self._current_process = subprocess.Popen(
