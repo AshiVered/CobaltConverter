@@ -1,5 +1,6 @@
 import wx
 
+from cobalt_converter.constants import LANGUAGES
 from cobalt_converter.utils import get_ffmpeg_version
 
 
@@ -24,7 +25,7 @@ class UIBuilderMixin:
 
         self.language_label = wx.StaticText(panel)
         top_sizer.Add(self.language_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 6)
-        self.language_choice = wx.ComboBox(panel, choices=["English", "עברית"], style=wx.CB_READONLY)
+        self.language_choice = wx.ComboBox(panel, choices=list(LANGUAGES.values()), style=wx.CB_READONLY)
         self.language_choice.Bind(wx.EVT_COMBOBOX, lambda e: self.change_language(self.language_choice.GetValue()))
         top_sizer.Add(self.language_choice, 0)
 
@@ -216,7 +217,8 @@ class UIBuilderMixin:
         self._cached_ffmpeg_version = get_ffmpeg_version(ffmpeg_path)
 
     def change_language(self, lang_name: str) -> None:
-        lang_code = "he" if lang_name == "עברית" else "en"
+        reverse_map = {v: k for k, v in LANGUAGES.items()}
+        lang_code = reverse_map.get(lang_name, "en")
         self.translator.set_language(lang_code)
         try:
             if lang_code == "he":

@@ -26,7 +26,6 @@ class IncompatibleFileDialog(wx.Dialog):
         title = translator.get("incompatible_file_dialog_title")
         super().__init__(parent, title=title, style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
         self.translator = translator
-        self.selected = None
         self._build_ui(filename, formats)
 
     def _build_ui(self, filename: str, formats: list[str]) -> None:

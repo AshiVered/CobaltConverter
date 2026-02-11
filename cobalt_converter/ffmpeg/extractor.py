@@ -1,6 +1,6 @@
 import logging
-import os
 import pathlib
+import shutil
 import stat
 import subprocess
 import sys
@@ -8,6 +8,7 @@ import tarfile
 import zipfile
 
 from cobalt_converter.exceptions.ffmpeg_exceptions import FFmpegExtractionError
+from cobalt_converter.utils import get_subprocess_flags
 
 
 def extract_ffmpeg_binary(
@@ -53,7 +54,7 @@ def _extract_from_zip(
                     f"Binary '{binary_path_in_archive}' not found in archive"
                 )
             with zf.open(binary_path_in_archive) as src, open(output_path, "wb") as dst:
-                dst.write(src.read())
+                shutil.copyfileobj(src, dst)
     except zipfile.BadZipFile as e:
         raise FFmpegExtractionError(f"Corrupt zip archive: {e}") from e
 
@@ -72,13 +73,13 @@ def _extract_from_tar_xz(
                     f"Cannot extract '{binary_path_in_archive}' from archive"
                 )
             with open(output_path, "wb") as dst:
-                dst.write(extracted.read())
+                shutil.copyfileobj(extracted, dst)
     except tarfile.TarError as e:
         raise FFmpegExtractionError(f"Corrupt tar archive: {e}") from e
-    except KeyError:
+    except KeyError as e:
         raise FFmpegExtractionError(
             f"Binary '{binary_path_in_archive}' not found in archive"
-        )
+        ) from e
 
 
 def _set_executable(path: pathlib.Path) -> None:
@@ -93,6 +94,7 @@ def _verify_binary(path: pathlib.Path) -> None:
             [str(path), "-version"],
             capture_output=True,
             timeout=10,
+            **get_subprocess_flags(),
         )
         if result.returncode != 0:
             path.unlink(missing_ok=True)

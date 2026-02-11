@@ -1,8 +1,6 @@
 import json
 import os
 
-from cobalt_converter.utils import get_base_path
-
 
 class Translator:
     def __init__(self, initial_language: str = "en") -> None:
@@ -11,7 +9,7 @@ class Translator:
         self._load_languages()
 
     def _load_languages(self) -> None:
-        base_path = os.path.join(get_base_path(), "cobalt_converter", "Languages")
+        base_path = os.path.join(os.path.dirname(__file__), "Languages")
         if not os.path.exists(base_path):
             return
 
