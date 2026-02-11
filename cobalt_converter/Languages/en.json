@@ -47,5 +47,12 @@
   "conversion_in_progress_message": "A conversion is currently running. Do you want to stop it and close?",
   "incompatible_file_dialog_title": "Incompatible File",
   "incompatible_file_message": "The file '{filename}' does not support the selected format.\nPlease select a new format to convert to:",
-  "skipping_incompatible_status": "Skipping {filename} (Cancelled by user)"
+  "skipping_incompatible_status": "Skipping {filename} (Cancelled by user)",
+  "quality_label": "Quality:",
+  "quality_default": "Default",
+  "quality_low": "Low",
+  "quality_medium": "Medium",
+  "quality_high": "High",
+  "quality_maximum": "Maximum",
+  "quality_custom": "Custom"
 }

@@ -47,5 +47,12 @@
   "conversion_in_progress_message": "המרה מתבצעת כעת. האם ברצונך לעצור אותה ולסגור?",
   "incompatible_file_dialog_title": "קובץ לא תואם",
   "incompatible_file_message": "הקובץ '{filename}' אינו תומך בפורמט שנבחר.\nאנא בחר פורמט חדש להמרה:",
-  "skipping_incompatible_status": "מדלג על {filename} (בוטל על ידי המשתמש)"
+  "skipping_incompatible_status": "מדלג על {filename} (בוטל על ידי המשתמש)",
+  "quality_label": "איכות:",
+  "quality_default": "ברירת מחדל",
+  "quality_low": "נמוכה",
+  "quality_medium": "בינונית",
+  "quality_high": "גבוהה",
+  "quality_maximum": "מקסימום",
+  "quality_custom": "מותאם אישית"
 }
