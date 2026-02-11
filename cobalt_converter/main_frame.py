@@ -43,6 +43,7 @@ class CobaltConverterFrame(wx.Frame):
 
         self.dialog_event = threading.Event()
         self.dialog_result: str | None = None
+        self._pending_conversion_after_download = False
 
         self.engine = ConversionEngine(
             progress_callback=lambda cur, total: wx.CallAfter(self._set_file_progress, cur, total),
@@ -326,7 +327,7 @@ class CobaltConverterFrame(wx.Frame):
         if not self.engine.get_ffmpeg_path():
             self._offer_ffmpeg_download()
             if not self.engine.get_ffmpeg_path():
-                return
+                return  # async download will auto-start conversion when done
 
         self.is_converting = True
         self.stop_requested = False
@@ -417,6 +418,7 @@ class CobaltConverterFrame(wx.Frame):
         dialog.Destroy()
 
         if result == wx.ID_YES:
+            self._pending_conversion_after_download = True
             self._run_ffmpeg_download()
         elif result == wx.ID_NO:
             self._prompt_for_ffmpeg_path()
@@ -429,9 +431,7 @@ class CobaltConverterFrame(wx.Frame):
         self.progress_bar.SetValue(0)
         self._set_status(self.translator.get("ffmpeg_downloading_status"))
 
-        self.dialog_event.clear()
         threading.Thread(target=self._download_ffmpeg_thread, daemon=True).start()
-        self.dialog_event.wait()
 
     def _download_ffmpeg_thread(self) -> None:
         try:
@@ -480,7 +480,11 @@ class CobaltConverterFrame(wx.Frame):
         self.select_btn.Enable(True)
         self.clear_btn.Enable(True)
         self._retranslate_ui()
-        self.dialog_event.set()
+
+        if self._pending_conversion_after_download and self.engine.get_ffmpeg_path():
+            self._pending_conversion_after_download = False
+            self.start_conversion()
+        self._pending_conversion_after_download = False
 
     # --- Close ---
     def on_close(self, event: wx.CloseEvent) -> None:
