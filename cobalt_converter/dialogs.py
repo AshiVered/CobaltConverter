@@ -1,6 +1,12 @@
+from __future__ import annotations
+
 import os
+from typing import TYPE_CHECKING
 
 import wx
+
+if TYPE_CHECKING:
+    from cobalt_converter.translator import Translator
 
 
 class FileDropTarget(wx.FileDropTarget):
@@ -16,7 +22,7 @@ class FileDropTarget(wx.FileDropTarget):
 
 
 class IncompatibleFileDialog(wx.Dialog):
-    def __init__(self, parent: wx.Window, filename: str, formats: list[str], translator) -> None:
+    def __init__(self, parent: wx.Window, filename: str, formats: list[str], translator: Translator) -> None:
         title = translator.get("incompatible_file_dialog_title")
         super().__init__(parent, title=title, style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
         self.translator = translator

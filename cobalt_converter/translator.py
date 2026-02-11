@@ -29,7 +29,7 @@ class Translator:
         if lang_code in self.translations:
             self.language = lang_code
 
-    def get(self, key: str, **kwargs: str) -> str:
+    def get(self, key: str, **kwargs: str | int | float) -> str:
         try:
             template = self.translations[self.language][key]
             return template.format(**kwargs) if kwargs else template
