@@ -1,0 +1,36 @@
+{
+  "sources": {
+    "windows_x64": {
+      "url": "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip",
+      "archive_type": "zip",
+      "binary_path_in_archive": "ffmpeg-master-latest-win64-gpl/bin/ffmpeg.exe",
+      "binary_name": "ffmpeg.exe"
+    },
+    "linux_x64": {
+      "url": "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz",
+      "archive_type": "tar.xz",
+      "binary_path_in_archive": "ffmpeg-master-latest-linux64-gpl/bin/ffmpeg",
+      "binary_name": "ffmpeg"
+    },
+    "linux_arm64": {
+      "url": "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linuxarm64-gpl.tar.xz",
+      "archive_type": "tar.xz",
+      "binary_path_in_archive": "ffmpeg-master-latest-linuxarm64-gpl/bin/ffmpeg",
+      "binary_name": "ffmpeg"
+    },
+    "darwin_universal": {
+      "url": "https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip",
+      "archive_type": "zip",
+      "binary_path_in_archive": "ffmpeg",
+      "binary_name": "ffmpeg"
+    }
+  },
+  "platform_map": {
+    "win32_AMD64": "windows_x64",
+    "win32_x86_64": "windows_x64",
+    "linux_x86_64": "linux_x64",
+    "linux_aarch64": "linux_arm64",
+    "darwin_x86_64": "darwin_universal",
+    "darwin_arm64": "darwin_universal"
+  }
+}
