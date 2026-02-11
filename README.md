@@ -14,7 +14,7 @@ FFmpeg is a powerful multimedia toolkit, but it lacks a graphical interface — 
 - Multi-language support (English, Hebrew)
 - Quality presets (Low / Medium / High / Maximum) + Custom mode with per-format controls
 - WMA audio format support
-- Debug mode with full system diagnostics (Settings menu or `--debug` flag)
+- Debug mode for troubleshooting
 
 ---
 
@@ -58,6 +58,24 @@ CobaltConverter downloads FFmpeg automatically when needed. If you don't have in
 
 ---
 
+## 🐛 Debug Mode
+
+If something isn't working as expected, you can enable Debug Mode to generate a detailed log file for troubleshooting.
+
+### From the application
+Go to **Settings > Debug Mode** in the menu bar. The setting is saved automatically and will remain active on next launch.
+
+### From the command line (for developers)
+    python CobaltConverter.py --debug
+
+When Debug Mode is active:
+- The window title shows **[DEBUG]** and the footer displays **DEBUG**
+- A full system diagnostics report is written to the log (OS, Python, FFmpeg version, etc.)
+- All FFmpeg commands and their output are logged line by line
+- The log file is saved as `CobaltConverter.log` next to the application
+
+---
+
 ## To-Do List
 
 | Status | Feature |
@@ -68,6 +86,8 @@ CobaltConverter downloads FFmpeg automatically when needed. If you don't have in
 | ✅ | Quality presets + Custom quality controls |
 | ✅ | WMA format support |
 | ✅ | Debug mode with system diagnostics |
+| ⏳ | Audio/video trimming |
+| ⏳ | File merging |
 | ⏳ | Add option to use via right-click menu |
 | ⏳ | Add document conversion |
 | ⏳ | Add support for all FFmpeg-supported formats |
