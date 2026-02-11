@@ -179,6 +179,9 @@ class UIBuilderMixin:
                     style=wx.SL_HORIZONTAL,
                 )
                 slider.SetMinSize((150, -1))
+                step = param.get("step", 1)
+                slider.SetLineSize(step)
+                slider.SetPageSize(step)
                 self.custom_sizer.Add(slider, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
                 self.custom_controls[name] = slider
 
@@ -208,6 +211,10 @@ class UIBuilderMixin:
         if param_name in self.custom_value_labels:
             self.custom_value_labels[param_name].SetLabel(f"{value}{suffix}")
 
+    def refresh_ffmpeg_cache(self) -> None:
+        ffmpeg_path = self.engine.get_ffmpeg_path()
+        self._cached_ffmpeg_version = get_ffmpeg_version(ffmpeg_path)
+
     def change_language(self, lang_name: str) -> None:
         lang_code = "he" if lang_name == "עברית" else "en"
         self.translator.set_language(lang_code)
@@ -236,8 +243,7 @@ class UIBuilderMixin:
         self.stop_btn.SetLabel(t.get("stop_btn"))
         self.language_label.SetLabel(t.get("language_label"))
 
-        ffmpeg_path = self.engine.get_ffmpeg_path()
-        ffmpeg_version = get_ffmpeg_version(ffmpeg_path)
+        ffmpeg_version = getattr(self, "_cached_ffmpeg_version", None)
         footer_text = t.get("footer")
         if ffmpeg_version:
             footer_text += f"  |  FFmpeg {ffmpeg_version}"

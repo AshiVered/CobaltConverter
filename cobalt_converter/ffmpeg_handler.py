@@ -100,6 +100,7 @@ class FFmpegDownloadMixin:
         self.convert_btn.Enable(True)
         self.select_btn.Enable(True)
         self.clear_btn.Enable(True)
+        self.refresh_ffmpeg_cache()
         self._retranslate_ui()
 
         if self._pending_conversion_after_download and self.engine.get_ffmpeg_path():

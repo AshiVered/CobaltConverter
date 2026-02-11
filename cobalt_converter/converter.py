@@ -71,7 +71,7 @@ class ConversionEngine:
         if self._current_process:
             try:
                 self._current_process.terminate()
-            except OSError:
+            except (OSError, AttributeError):
                 pass
 
     def _convert_all(self, files: list[str], initial_format: str, output_folder: str | None, quality_flags: list[str] | None = None) -> None:
@@ -148,8 +148,7 @@ class ConversionEngine:
                 stderr=subprocess.STDOUT,
                 text=True,
                 encoding="utf-8",
-                errors="ignore",
-                universal_newlines=True,
+                errors="replace",
                 **get_subprocess_flags(),
             )
 
@@ -165,6 +164,8 @@ class ConversionEngine:
             rc = self._current_process.returncode
             if rc != 0:
                 logging.error("FFmpeg exited with code %d", rc)
+                if os.path.exists(output_file):
+                    os.remove(output_file)
             else:
                 logging.info("FFmpeg finished successfully for %s", input_file)
 

@@ -46,6 +46,7 @@ class CobaltConverterFrame(
 
         self._build_ui()
         self.SetDropTarget(FileDropTarget(self))
+        self.refresh_ffmpeg_cache()
 
         detected = detect_system_language()
         display = "עברית" if detected == "he" else "English"
