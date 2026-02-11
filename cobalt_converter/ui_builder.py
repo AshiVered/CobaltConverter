@@ -62,9 +62,27 @@ class UIBuilderMixin:
         format_sizer.Add(self.format_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 6)
         self.format_combo = wx.ComboBox(panel, choices=[], style=wx.CB_READONLY)
         self.format_combo.SetMinSize((150, -1))
-        format_sizer.Add(self.format_combo, 0, wx.RIGHT, 6)
+        self.format_combo.Bind(wx.EVT_COMBOBOX, lambda e: self._on_format_changed())
+        format_sizer.Add(self.format_combo, 0, wx.RIGHT, 12)
+
+        self.quality_label = wx.StaticText(panel)
+        format_sizer.Add(self.quality_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 6)
+        self.quality_combo = wx.ComboBox(panel, style=wx.CB_READONLY)
+        self.quality_combo.SetMinSize((150, -1))
+        self.quality_combo.Bind(wx.EVT_COMBOBOX, lambda e: self._on_quality_changed())
+        format_sizer.Add(self.quality_combo, 0, wx.RIGHT, 6)
+
         format_sizer.AddStretchSpacer(1)
         main_sizer.Add(format_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 8)
+
+        self.custom_panel = wx.Panel(panel)
+        self.custom_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.custom_panel.SetSizer(self.custom_sizer)
+        self.custom_panel.Hide()
+        main_sizer.Add(self.custom_panel, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 8)
+
+        self.custom_controls: dict[str, wx.Window] = {}
+        self.custom_value_labels: dict[str, wx.StaticText] = {}
 
         self.progress_bar = wx.Gauge(panel, range=100)
         main_sizer.Add(self.progress_bar, 0, wx.EXPAND | wx.ALL, 8)
@@ -95,6 +113,100 @@ class UIBuilderMixin:
 
         self._retranslate_ui()
 
+    def _on_format_changed(self) -> None:
+        self._update_quality_options()
+
+    def _on_quality_changed(self) -> None:
+        selected = self.quality_combo.GetValue()
+        is_custom = selected == self.translator.get("quality_custom")
+        if is_custom:
+            self._build_custom_controls()
+            self.custom_panel.Show()
+        else:
+            self.custom_panel.Hide()
+        self.GetSizer() or self.Layout()
+        self.Layout()
+
+    def _update_quality_options(self) -> None:
+        output_format = self.format_combo.GetValue()
+        t = self.translator
+
+        self.quality_combo.Clear()
+        self.custom_panel.Hide()
+
+        if not output_format or self.quality_manager.is_lossless(output_format):
+            self.quality_combo.Enable(False)
+            self.quality_combo.Append(t.get("quality_default"))
+            self.quality_combo.SetSelection(0)
+            return
+
+        self.quality_combo.Enable(True)
+        choices = [
+            t.get("quality_default"),
+            t.get("quality_low"),
+            t.get("quality_medium"),
+            t.get("quality_high"),
+            t.get("quality_maximum"),
+            t.get("quality_custom"),
+        ]
+        for choice in choices:
+            self.quality_combo.Append(choice)
+        self.quality_combo.SetSelection(0)
+        self.Layout()
+
+    def _build_custom_controls(self) -> None:
+        self.custom_sizer.Clear(delete_windows=True)
+        self.custom_controls.clear()
+        self.custom_value_labels.clear()
+
+        output_format = self.format_combo.GetValue()
+        if not output_format:
+            return
+
+        params = self.quality_manager.get_custom_params(output_format)
+        for param in params:
+            name = param["name"]
+            label = wx.StaticText(self.custom_panel, label=f"{name}:")
+            self.custom_sizer.Add(label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
+
+            if param["type"] == "slider":
+                slider = wx.Slider(
+                    self.custom_panel,
+                    value=param["default"],
+                    minValue=param["min"],
+                    maxValue=param["max"],
+                    style=wx.SL_HORIZONTAL,
+                )
+                slider.SetMinSize((150, -1))
+                self.custom_sizer.Add(slider, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
+                self.custom_controls[name] = slider
+
+                suffix = param.get("suffix", "")
+                value_label = wx.StaticText(self.custom_panel, label=f"{param['default']}{suffix}")
+                self.custom_sizer.Add(value_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 12)
+                self.custom_value_labels[name] = value_label
+
+                slider.Bind(wx.EVT_SLIDER, lambda e, n=name, s=suffix: self._on_custom_slider_changed(n, s))
+
+            elif param["type"] == "choice":
+                combo = wx.ComboBox(
+                    self.custom_panel,
+                    choices=param["options"],
+                    style=wx.CB_READONLY,
+                )
+                combo.SetValue(param["default"])
+                self.custom_sizer.Add(combo, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 12)
+                self.custom_controls[name] = combo
+
+        self.custom_panel.Layout()
+        self.Layout()
+
+    def _on_custom_slider_changed(self, param_name: str, suffix: str) -> None:
+        slider = self.custom_controls[param_name]
+        value = slider.GetValue()
+        if param_name in self.custom_value_labels:
+            self.custom_value_labels[param_name].SetLabel(f"{value}{suffix}")
+
     def change_language(self, lang_name: str) -> None:
         lang_code = "he" if lang_name == "עברית" else "en"
         self.translator.set_language(lang_code)
@@ -118,6 +230,7 @@ class UIBuilderMixin:
         self.output_folder_edit.SetHint(t.get("output_folder_placeholder"))
         self.browse_output_btn.SetLabel(t.get("browse_btn"))
         self.format_label.SetLabel(t.get("convert_to_label"))
+        self.quality_label.SetLabel(t.get("quality_label"))
         self.convert_btn.SetLabel(t.get("convert_now_btn"))
         self.stop_btn.SetLabel(t.get("stop_btn"))
         self.language_label.SetLabel(t.get("language_label"))
@@ -135,3 +248,5 @@ class UIBuilderMixin:
             current_status = self.status_label.GetLabel()
             if current_status in ["", t.get("status_ready")]:
                 self.status_label.SetLabel(t.get("status_ready"))
+
+        self._update_quality_options()
