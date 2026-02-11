@@ -113,6 +113,7 @@ class FileHandlingMixin:
             self.format_combo.Append(f)
         if current_selection and current_selection in formats:
             self.format_combo.SetValue(current_selection)
+        self._update_quality_options()
 
     def _toggle_output_folder(self, _event: wx.CommandEvent) -> None:
         enabled = self.use_custom_output.GetValue()
