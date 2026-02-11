@@ -32,15 +32,11 @@ Each release includes two variants:
 
 ### macOS — first launch
 
-macOS blocks apps from unidentified developers by default. To open CobaltConverter:
+macOS blocks apps from unidentified developers. After extracting the `.zip`, open Terminal and run:
 
-1. Extract the downloaded `.zip` file
-2. Double-click `CobaltConverter.app` — macOS will show a security warning
-3. Open **System Settings > Privacy & Security**
-4. Scroll down — you'll see a message about CobaltConverter being blocked
-5. Click **Open Anyway** and confirm
+    xattr -cr CobaltConverter.app
 
-You only need to do this once. After that the app will open normally.
+Then double-click the app to open it. You only need to do this once.
 
 ### Running from Python source
 

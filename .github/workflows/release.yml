@@ -111,6 +111,8 @@ jobs:
           cd staging
           if [ "${{ runner.os }}" = "Windows" ]; then
             7z a "../${NAME}.zip" "${NAME}"
+          elif [ "${{ runner.os }}" = "macOS" ]; then
+            zip -yr "../${NAME}.zip" "${NAME}"
           else
             zip -r "../${NAME}.zip" "${NAME}"
           fi
@@ -158,6 +160,8 @@ jobs:
           cd staging
           if [ "${{ runner.os }}" = "Windows" ]; then
             7z a "../${NAME}.zip" "${NAME}"
+          elif [ "${{ runner.os }}" = "macOS" ]; then
+            zip -yr "../${NAME}.zip" "${NAME}"
           else
             zip -r "../${NAME}.zip" "${NAME}"
           fi
