@@ -123,6 +123,25 @@ def get_subprocess_flags():
     if sys.platform == 'win32': return {'creationflags': 0x08000000}
     return {}
 
+def get_ffmpeg_version(ffmpeg_path: str | None) -> str | None:
+    if not ffmpeg_path:
+        return None
+    try:
+        result = subprocess.run(
+            [ffmpeg_path, "-version"],
+            capture_output=True, text=True, timeout=5,
+            **get_subprocess_flags(),
+        )
+        if result.returncode == 0:
+            first_line = result.stdout.split("\n")[0]
+            match = re.search(r"ffmpeg version (\S+)", first_line)
+            if match:
+                return match.group(1)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    return None
+
+
 def get_file_type(file_path):
     ext = pathlib.Path(file_path).suffix.lower().lstrip(".")
     if ext in VIDEO_FORMATS: return 'video'
@@ -334,7 +353,14 @@ class CobaltConverterFrame(wx.Frame):
         self.format_label.SetLabel(t.get("convert_to_label"))
         self.convert_btn.SetLabel(t.get("convert_now_btn"))
         self.stop_btn.SetLabel(t.get("stop_btn"))
-        self.footer_label.SetLabel(t.get("footer"))
+        ffmpeg_path = self.get_ffmpeg_path()
+        ffmpeg_version = get_ffmpeg_version(ffmpeg_path)
+        footer_text = t.get("footer")
+        if ffmpeg_version:
+            footer_text += f"  |  FFmpeg {ffmpeg_version}"
+        else:
+            footer_text += f"  |  FFmpeg: {t.get('ffmpeg_not_installed')}"
+        self.footer_label.SetLabel(footer_text)
         self.language_label.SetLabel(t.get("language_label"))
 
         if not self.is_converting:

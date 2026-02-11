@@ -41,6 +41,7 @@
   "ffmpeg_download_failed": "Failed to download FFmpeg: {error}",
   "ffmpeg_extraction_failed": "Failed to extract FFmpeg: {error}",
   "ffmpeg_unsupported_platform": "Automatic FFmpeg download is not available for your platform. Please install FFmpeg manually.",
+  "ffmpeg_not_installed": "Not installed",
   "locate_ffmpeg_dialog_title": "Locate FFmpeg Executable",
   "conversion_in_progress_title": "Conversion in Progress",
   "conversion_in_progress_message": "A conversion is currently running. Do you want to stop it and close?",
