@@ -57,7 +57,10 @@ def _flush_all_handlers() -> None:
 
 def get_base_path() -> str:
     if getattr(sys, "frozen", False):
-        return os.path.dirname(sys.executable)
+        exe_dir = os.path.dirname(sys.executable)
+        if sys.platform == "darwin" and exe_dir.endswith(os.path.join("Contents", "MacOS")):
+            return os.path.dirname(os.path.dirname(os.path.dirname(exe_dir)))
+        return exe_dir
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
