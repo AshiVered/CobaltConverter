@@ -1,4 +1,4 @@
-from exceptions.ffmpeg_exceptions import (
+from cobalt_converter.exceptions.ffmpeg_exceptions import (
     FFmpegDownloadError,
     FFmpegExtractionError,
     UnsupportedPlatformError,
