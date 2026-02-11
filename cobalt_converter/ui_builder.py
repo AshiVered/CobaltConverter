@@ -1,10 +1,5 @@
 import wx
 
-from cobalt_converter.constants import (
-    AUDIO_FORMATS,
-    IMAGE_FORMATS,
-    VIDEO_FORMATS,
-)
 from cobalt_converter.utils import get_ffmpeg_version
 
 

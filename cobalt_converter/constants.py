@@ -1,10 +1,20 @@
+import json
+import os
 import pathlib
 
-VIDEO_FORMATS = ["mp4", "mkv", "avi", "mov", "webm", "flv", "wmv", "gif"]
-AUDIO_FORMATS = ["mp3", "aac", "wav", "flac", "ogg", "m4a"]
-IMAGE_FORMATS = ["jpg", "jpeg", "png", "bmp", "tiff", "webp"]
 
-LANGUAGES = {"en": "English", "he": "עברית"}
+def _load_formats() -> dict:
+    config_path = os.path.join(os.path.dirname(__file__), "config", "formats.json")
+    with open(config_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+_CONFIG = _load_formats()
+
+VIDEO_FORMATS: list[str] = _CONFIG["video"]
+AUDIO_FORMATS: list[str] = _CONFIG["audio"]
+IMAGE_FORMATS: list[str] = _CONFIG["image"]
+LANGUAGES: dict[str, str] = _CONFIG["languages"]
 
 
 def get_file_type(file_path: str) -> str:

@@ -1,0 +1,9 @@
+{
+  "video": ["mp4", "mkv", "avi", "mov", "webm", "flv", "wmv", "gif"],
+  "audio": ["mp3", "aac", "wav", "flac", "ogg", "m4a", "wma"],
+  "image": ["jpg", "jpeg", "png", "bmp", "tiff", "webp"],
+  "languages": {
+    "en": "English",
+    "he": "עברית"
+  }
+}
