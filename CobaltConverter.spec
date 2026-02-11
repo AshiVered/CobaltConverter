@@ -32,6 +32,7 @@ else:
     print("[BUILD] Building WITHOUT FFmpeg")
 
 app_name = "CobaltConverter"
+is_macos = current_os == "Darwin"
 
 a = Analysis(
     ["CobaltConverter.py"],
@@ -48,23 +49,31 @@ a = Analysis(
 
 pyz = PYZ(a.pure)
 
-exe = EXE(
-    pyz,
-    a.scripts,
-    a.binaries,
-    a.datas,
-    name=app_name,
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=False,
-    console=False,
-    disable_windowed_traceback=False,
-)
+if is_macos:
+    exe = EXE(
+        pyz,
+        a.scripts,
+        exclude_binaries=True,
+        name=app_name,
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=False,
+        upx=False,
+        console=False,
+        disable_windowed_traceback=False,
+    )
 
-if current_os == "Darwin":
-    app = BUNDLE(
+    coll = COLLECT(
         exe,
+        a.binaries,
+        a.datas,
+        strip=False,
+        upx=False,
+        name=app_name,
+    )
+
+    app = BUNDLE(
+        coll,
         name=f"{app_name}.app",
         bundle_identifier="com.cobaltconverter.app",
         version="0.7",
@@ -75,4 +84,18 @@ if current_os == "Darwin":
             "CFBundleShortVersionString": "0.7",
             "NSHighResolutionCapable": True,
         },
+    )
+else:
+    exe = EXE(
+        pyz,
+        a.scripts,
+        a.binaries,
+        a.datas,
+        name=app_name,
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=False,
+        upx=False,
+        console=False,
+        disable_windowed_traceback=False,
     )
