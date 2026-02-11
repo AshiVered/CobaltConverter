@@ -33,14 +33,16 @@ Install wxPython using pip:
     pip install wxPython
 
 ### Offline / Manual FFmpeg Setup
-If you prefer not to use the automatic download (e.g. for offline use), place the FFmpeg binary in the `bin/` folder at the project root:
+If you prefer not to use the automatic download (e.g. for offline use), download the binary for your platform and place it in the `bin/` folder at the project root:
 
-| Platform        | Expected file       |
-|:----------------|:--------------------|
-| Windows         | `bin/ffmpeg.exe`    |
-| macOS / Linux   | `bin/ffmpeg`        |
+| Platform         | Download link | Expected file |
+|:-----------------|:--------------|:--------------|
+| Windows x64      | [ffmpeg-win64-gpl.zip](https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip) | `bin/ffmpeg.exe` |
+| macOS (Universal)| [ffmpeg-mac.zip](https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip) | `bin/ffmpeg` |
+| Linux x64        | [ffmpeg-linux64-gpl.tar.xz](https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz) | `bin/ffmpeg` |
+| Linux ARM64      | [ffmpeg-linuxarm64-gpl.tar.xz](https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linuxarm64-gpl.tar.xz) | `bin/ffmpeg` |
 
-Download FFmpeg from [ffmpeg.org](https://ffmpeg.org/download.html) and copy the binary to the correct path. On macOS/Linux make sure it is executable (`chmod +x bin/ffmpeg`).
+Extract the `ffmpeg` binary from the archive and copy it to the `bin/` folder. On macOS/Linux make sure it is executable (`chmod +x bin/ffmpeg`).
 
 ---
 
