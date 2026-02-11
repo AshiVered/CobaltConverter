@@ -1,7 +1,6 @@
 log.txt
 dist/
 build/
-CobaltConverter.spec
 CobaltConverter.exe
 *.zip
 CobaltConverter.log
