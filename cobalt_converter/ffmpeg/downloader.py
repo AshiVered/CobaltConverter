@@ -4,7 +4,7 @@ import urllib.request
 import urllib.error
 from collections.abc import Callable
 
-from exceptions.ffmpeg_exceptions import FFmpegDownloadError
+from cobalt_converter.exceptions.ffmpeg_exceptions import FFmpegDownloadError
 
 CHUNK_SIZE = 8192
 

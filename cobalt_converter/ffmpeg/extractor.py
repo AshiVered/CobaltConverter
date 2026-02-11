@@ -7,7 +7,7 @@ import sys
 import tarfile
 import zipfile
 
-from exceptions.ffmpeg_exceptions import FFmpegExtractionError
+from cobalt_converter.exceptions.ffmpeg_exceptions import FFmpegExtractionError
 
 
 def extract_ffmpeg_binary(

@@ -4,14 +4,14 @@ import pathlib
 import shutil
 from collections.abc import Callable
 
-from exceptions.ffmpeg_exceptions import (
+from cobalt_converter.exceptions.ffmpeg_exceptions import (
     FFmpegDownloadError,
     FFmpegExtractionError,
     UnsupportedPlatformError,
 )
-from ffmpeg.downloader import download_file
-from ffmpeg.extractor import extract_ffmpeg_binary
-from ffmpeg.platform_info import get_platform_key
+from cobalt_converter.ffmpeg.downloader import download_file
+from cobalt_converter.ffmpeg.extractor import extract_ffmpeg_binary
+from cobalt_converter.ffmpeg.platform_info import get_platform_key
 
 
 class FFmpegResolver:
