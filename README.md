@@ -12,6 +12,9 @@ FFmpeg is a powerful multimedia toolkit, but it lacks a graphical interface — 
 - Cross-platform (Windows, macOS, Linux)
 - Automatic FFmpeg download if not found on system
 - Multi-language support (English, Hebrew)
+- Quality presets (Low / Medium / High / Maximum) + Custom mode with per-format controls
+- WMA audio format support
+- Debug mode with full system diagnostics (Settings menu or `--debug` flag)
 
 ---
 
@@ -62,6 +65,9 @@ CobaltConverter downloads FFmpeg automatically when needed. If you don't have in
 | ✅ | Support multiple languages *(done in v0.6)* |
 | ✅ | Add batch conversion *(done in v0.4.2)* |
 | ✅ | Auto-download FFmpeg if not installed |
+| ✅ | Quality presets + Custom quality controls |
+| ✅ | WMA format support |
+| ✅ | Debug mode with system diagnostics |
 | ⏳ | Add option to use via right-click menu |
 | ⏳ | Add document conversion |
 | ⏳ | Add support for all FFmpeg-supported formats |
