@@ -1,3 +1,4 @@
+import logging
 import os
 
 import wx
@@ -26,6 +27,7 @@ class FileHandlingMixin:
             if file not in self.files and os.path.isfile(file):
                 self.files.append(file)
                 self._add_file_item(file)
+                logging.debug("Added file: %s", file)
                 added = True
         if self.files:
             self._update_format_options()
@@ -85,6 +87,7 @@ class FileHandlingMixin:
     def clear_files(self) -> None:
         if self.is_converting:
             return
+        logging.debug("Clearing all files (%d)", len(self.files))
         self.files.clear()
         for child in list(self.scroll.GetChildren()):
             if hasattr(child, "file_path"):

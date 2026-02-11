@@ -1,3 +1,5 @@
+import logging
+
 import wx
 
 from cobalt_converter.dialogs import IncompatibleFileDialog
@@ -25,10 +27,16 @@ class ConversionMixin:
         self.progress_bar.SetValue(0)
 
         quality_flags = self._build_quality_flags()
+        output_format = self.format_combo.GetValue()
+
+        logging.info(
+            "Starting conversion: %d files, format=%s, quality_flags=%s",
+            len(self.files), output_format, quality_flags,
+        )
 
         self.engine.start(
             files=self.files.copy(),
-            output_format=self.format_combo.GetValue(),
+            output_format=output_format,
             output_folder=self.output_folder,
             quality_flags=quality_flags,
         )
@@ -68,6 +76,7 @@ class ConversionMixin:
         title = self.translator.get("stop_conversion_title")
         message = self.translator.get("stop_conversion_message")
         if wx.MessageBox(message, title, wx.YES_NO | wx.ICON_QUESTION) == wx.YES:
+            logging.info("User requested conversion stop")
             self.stop_requested = True
             self.engine.stop()
             if not self.dialog_event.is_set():
@@ -100,6 +109,7 @@ class ConversionMixin:
         if not self.engine.stop_requested and self.files:
             self.progress_bar.SetValue(100)
             self._set_status(self.translator.get("all_conversions_complete_status"))
+            logging.info("Conversion batch finished successfully")
         self._retranslate_ui()
 
     def _show_incompatible_dialog(self, file_path: str, valid_formats: list[str]) -> None:

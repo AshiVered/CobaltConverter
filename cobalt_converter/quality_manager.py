@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 
 from cobalt_converter.constants import get_file_type
@@ -49,7 +50,9 @@ class QualityManager:
         if preset_key == "default" or self.is_lossless(output_format):
             return []
         presets = self.get_presets_for_format(output_format)
-        return list(presets.get(preset_key, []))
+        flags = list(presets.get(preset_key, []))
+        logging.debug("Preset flags for %s/%s: %s", output_format, preset_key, flags)
+        return flags
 
     def build_custom_flags(self, output_format: str, values: dict[str, str | int]) -> list[str]:
         if self.is_lossless(output_format):
@@ -62,6 +65,7 @@ class QualityManager:
                 value = str(values[name])
                 suffix = param.get("suffix", "")
                 flags.extend([param["flag"], f"{value}{suffix}"])
+        logging.debug("Custom flags for %s (values=%s): %s", output_format, values, flags)
         return flags
 
     @staticmethod
