@@ -52,6 +52,8 @@ VIDEO_FORMATS = ["mp4", "mkv", "avi", "mov", "webm", "flv", "wmv", "gif"]
 AUDIO_FORMATS = ["mp3", "aac", "wav", "flac", "ogg", "m4a"]
 IMAGE_FORMATS = ["jpg", "jpeg", "png", "bmp", "tiff", "webp"]
 
+LANGUAGES = {"en": "English", "he": "עברית"}
+
 # --- UTILITY FUNCTIONS ---
 def detect_system_language():
     """
@@ -587,7 +589,7 @@ class CobaltConverterFrame(wx.Frame):
             rc = self.current_process.returncode
             if rc != 0:
                 logging.error(f"FFmpeg exited with code {rc}")
-                wx.CallAfter(self._set_status, f"שגיאה בהמרת {os.path.basename(input_file)} (קוד {rc})")
+                wx.CallAfter(self._set_status, self.translator.get("error_converting_status", filename=os.path.basename(input_file), error=f"exit code {rc}"))
             else:
                 logging.info(f"FFmpeg finished successfully for {input_file}")
 

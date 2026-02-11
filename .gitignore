@@ -5,3 +5,5 @@ CobaltConverter.spec
 CobaltConverter.exe
 *.zip
 CobaltConverter.log
+.idea
+CLAUDE.md
