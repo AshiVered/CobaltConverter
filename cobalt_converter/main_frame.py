@@ -7,6 +7,7 @@ from cobalt_converter.converter import ConversionEngine
 from cobalt_converter.dialogs import FileDropTarget
 from cobalt_converter.ffmpeg_handler import FFmpegDownloadMixin
 from cobalt_converter.file_handling import FileHandlingMixin
+from cobalt_converter.quality_manager import QualityManager
 from cobalt_converter.translator import Translator
 from cobalt_converter.ui_builder import UIBuilderMixin
 from cobalt_converter.utils import detect_system_language, setup_logging
@@ -30,6 +31,7 @@ class CobaltConverterFrame(
         self.stop_requested = False
         self.output_folder: str | None = None
         self.translator = Translator()
+        self.quality_manager = QualityManager()
 
         self.dialog_event = threading.Event()
         self.dialog_result: str | None = None
