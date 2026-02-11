@@ -9,3 +9,4 @@ CobaltConverter.log
 CLAUDE.md
 bin/ffmpeg
 __pycache__/
+settings.json
