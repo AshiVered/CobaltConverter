@@ -25,7 +25,7 @@ You can run the Python source directly on **Linux** or **macOS**.
 FFmpeg will be downloaded automatically on first use if not already installed.
 
 #### Requirements
-- [Python 3.10+](https://www.python.org/downloads/)
+- [Python 3.12+](https://www.python.org/downloads/)
 - [wxPython](https://github.com/wxWidgets/Phoenix)
 
 Install wxPython using pip:
