@@ -54,5 +54,7 @@
   "quality_medium": "בינונית",
   "quality_high": "גבוהה",
   "quality_maximum": "מקסימום",
-  "quality_custom": "מותאם אישית"
+  "quality_custom": "מותאם אישית",
+  "menu_settings": "&הגדרות",
+  "menu_debug_mode": "מצב דיבאג"
 }

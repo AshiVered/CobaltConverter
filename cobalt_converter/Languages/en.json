@@ -54,5 +54,7 @@
   "quality_medium": "Medium",
   "quality_high": "High",
   "quality_maximum": "Maximum",
-  "quality_custom": "Custom"
+  "quality_custom": "Custom",
+  "menu_settings": "&Settings",
+  "menu_debug_mode": "Debug Mode"
 }

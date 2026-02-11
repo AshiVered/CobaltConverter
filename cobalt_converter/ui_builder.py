@@ -1,7 +1,7 @@
 import wx
 
 from cobalt_converter.constants import LANGUAGES
-from cobalt_converter.utils import get_ffmpeg_version
+from cobalt_converter.utils import get_ffmpeg_version, is_debug_mode
 
 
 class UIBuilderMixin:
@@ -232,7 +232,10 @@ class UIBuilderMixin:
 
     def _retranslate_ui(self) -> None:
         t = self.translator
-        self.SetTitle(t.get("window_title"))
+        title = t.get("window_title")
+        if is_debug_mode():
+            title += " [DEBUG]"
+        self.SetTitle(title)
         self.select_btn.SetLabel(t.get("select_files_btn"))
         self.clear_btn.SetLabel(t.get("clear_btn"))
         self.drag_hint.SetLabel(t.get("drag_drop_hint"))
@@ -251,7 +254,14 @@ class UIBuilderMixin:
             footer_text += f"  |  FFmpeg {ffmpeg_version}"
         else:
             footer_text += f"  |  FFmpeg: {t.get('ffmpeg_not_installed')}"
+        if is_debug_mode():
+            footer_text += "  |  DEBUG"
         self.footer_label.SetLabel(footer_text)
+
+        menu_bar = getattr(self, "_menu_bar", None)
+        if menu_bar:
+            menu_bar.SetMenuLabel(0, t.get("menu_settings"))
+            self._debug_menu_item.SetItemLabel(t.get("menu_debug_mode"))
 
         if not self.is_converting:
             current_status = self.status_label.GetLabel()
