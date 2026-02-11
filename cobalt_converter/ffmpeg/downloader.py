@@ -20,10 +20,10 @@ def download_file(
 
     try:
         response = urllib.request.urlopen(url, timeout=timeout)
-    except urllib.error.URLError as e:
-        raise FFmpegDownloadError(f"Failed to connect: {e}") from e
     except urllib.error.HTTPError as e:
         raise FFmpegDownloadError(f"HTTP error {e.code}: {e.reason}") from e
+    except urllib.error.URLError as e:
+        raise FFmpegDownloadError(f"Failed to connect: {e}") from e
 
     total_bytes = int(response.headers.get("Content-Length", 0))
     bytes_downloaded = 0

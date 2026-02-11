@@ -77,6 +77,10 @@ class ConversionEngine:
     def _convert_all(self, files: list[str], initial_format: str, output_folder: str | None, quality_flags: list[str] | None = None) -> None:
         quality_flags = quality_flags or []
         ffmpeg_path = self.get_ffmpeg_path()
+        if ffmpeg_path is None:
+            self._status_callback("FFmpeg not found")
+            self._finished_callback()
+            return
         total = len(files)
         processed = 0
 
