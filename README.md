@@ -33,16 +33,25 @@ Install wxPython using pip:
     pip install wxPython
 
 ### Offline / Manual FFmpeg Setup
-If you prefer not to use the automatic download (e.g. for offline use), download the binary for your platform and place it in the `bin/` folder at the project root:
+CobaltConverter downloads FFmpeg automatically when needed. If you don't have internet access, you can set it up manually:
 
-| Platform         | Download link | Expected file |
-|:-----------------|:--------------|:--------------|
-| Windows x64      | [ffmpeg-win64-gpl.zip](https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip) | `bin/ffmpeg.exe` |
-| macOS (Universal)| [ffmpeg-mac.zip](https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip) | `bin/ffmpeg` |
-| Linux x64        | [ffmpeg-linux64-gpl.tar.xz](https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz) | `bin/ffmpeg` |
-| Linux ARM64      | [ffmpeg-linuxarm64-gpl.tar.xz](https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linuxarm64-gpl.tar.xz) | `bin/ffmpeg` |
+1. Download the FFmpeg archive for your platform:
 
-Extract the `ffmpeg` binary from the archive and copy it to the `bin/` folder. On macOS/Linux make sure it is executable (`chmod +x bin/ffmpeg`).
+   | Platform         | Download link |
+   |:-----------------|:--------------|
+   | Windows x64      | [ffmpeg-win64-gpl.zip](https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip) |
+   | macOS (Universal)| [ffmpeg-mac.zip](https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip) |
+   | Linux x64        | [ffmpeg-linux64-gpl.tar.xz](https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz) |
+   | Linux ARM64      | [ffmpeg-linuxarm64-gpl.tar.xz](https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linuxarm64-gpl.tar.xz) |
+
+2. Open the downloaded archive (`.zip` or `.tar.xz`) and find the file named `ffmpeg.exe` (Windows) or `ffmpeg` (macOS/Linux). It may be inside a subfolder called `bin/`.
+
+3. Copy that file into the `bin/` folder inside the CobaltConverter project folder. If the `bin/` folder doesn't exist, create it.
+
+4. **macOS/Linux only:** Open a terminal in the project folder and run:
+   ```
+   chmod +x bin/ffmpeg
+   ```
 
 ---
 
