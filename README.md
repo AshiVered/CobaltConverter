@@ -32,6 +32,16 @@ Install wxPython using pip:
 
     pip install wxPython
 
+### Offline / Manual FFmpeg Setup
+If you prefer not to use the automatic download (e.g. for offline use), place the FFmpeg binary in the `bin/` folder at the project root:
+
+| Platform        | Expected file       |
+|:----------------|:--------------------|
+| Windows         | `bin/ffmpeg.exe`    |
+| macOS / Linux   | `bin/ffmpeg`        |
+
+Download FFmpeg from [ffmpeg.org](https://ffmpeg.org/download.html) and copy the binary to the correct path. On macOS/Linux make sure it is executable (`chmod +x bin/ffmpeg`).
+
 ---
 
 ## To-Do List
