@@ -7,10 +7,11 @@ FFmpeg is a powerful multimedia toolkit, but it lacks a graphical interface — 
 
 ## 🚀 Features
 
-- Clean and simple graphical interface for FFmpeg  
-- Batch conversion support  
-- Cross-platform (Windows, macOS, Linux)  
-- Extensible design for future format and feature support  
+- Clean and simple graphical interface for FFmpeg
+- Batch conversion support
+- Cross-platform (Windows, macOS, Linux)
+- Automatic FFmpeg download if not found on system
+- Multi-language support (English, Hebrew)
 
 ---
 
@@ -20,12 +21,12 @@ FFmpeg is a powerful multimedia toolkit, but it lacks a graphical interface — 
 Pre-compiled releases are available for **Windows** under the [Releases](../../releases) section.
 
 ### Other Operating Systems
-You can run the Python source directly on **Linux** or **macOS**, provided FFmpeg and PySide6 are installed.
+You can run the Python source directly on **Linux** or **macOS**.
+FFmpeg will be downloaded automatically on first use if not already installed.
 
 #### Requirements
-- [Python 3.8+](https://www.python.org/downloads/)
-- [FFmpeg](https://ffmpeg.org/download.html)
-- [WxPython](https://github.com/wxWidgets/Phoenix)
+- [Python 3.10+](https://www.python.org/downloads/)
+- [wxPython](https://github.com/wxWidgets/Phoenix)
 
 Install wxPython using pip:
 
@@ -39,6 +40,7 @@ Install wxPython using pip:
 |:------:|----------|
 | ✅ | Support multiple languages *(done in v0.6)* |
 | ✅ | Add batch conversion *(done in v0.4.2)* |
+| ✅ | Auto-download FFmpeg if not installed |
 | ⏳ | Add option to use via right-click menu |
 | ⏳ | Add document conversion |
 | ⏳ | Add support for all FFmpeg-supported formats |
