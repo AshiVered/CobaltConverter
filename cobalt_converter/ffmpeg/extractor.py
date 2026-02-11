@@ -8,7 +8,7 @@ import tarfile
 import zipfile
 
 from cobalt_converter.exceptions.ffmpeg_exceptions import FFmpegExtractionError
-from cobalt_converter.utils import get_subprocess_flags
+from cobalt_converter.utils import get_subprocess_env, get_subprocess_flags
 
 
 def extract_ffmpeg_binary(
@@ -94,6 +94,7 @@ def _verify_binary(path: pathlib.Path) -> None:
             [str(path), "-version"],
             capture_output=True,
             timeout=10,
+            env=get_subprocess_env(),
             **get_subprocess_flags(),
         )
         if result.returncode != 0:

@@ -61,6 +61,12 @@ def get_base_path() -> str:
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
+def get_bundled_path() -> str:
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        return sys._MEIPASS
+    return get_base_path()
+
+
 def setup_logging(debug: bool = False) -> str:
     global _debug_mode
     _debug_mode = debug
@@ -137,11 +143,17 @@ def _log_system_info() -> None:
 
 def _find_ffmpeg_for_info() -> str | None:
     ffmpeg_name = "ffmpeg.exe" if sys.platform == "win32" else "ffmpeg"
-    local_path = os.path.join(get_base_path(), "bin", ffmpeg_name)
-    if os.path.isfile(local_path):
-        return local_path
+    for base in [get_base_path(), get_bundled_path()]:
+        local_path = os.path.join(base, "bin", ffmpeg_name)
+        if os.path.isfile(local_path):
+            return local_path
     try:
-        subprocess.run([ffmpeg_name, "-version"], capture_output=True, **get_subprocess_flags())
+        subprocess.run(
+            [ffmpeg_name, "-version"],
+            capture_output=True,
+            env=get_subprocess_env(),
+            **get_subprocess_flags(),
+        )
         return ffmpeg_name
     except FileNotFoundError:
         return None
@@ -151,6 +163,18 @@ def get_subprocess_flags() -> dict:
     if sys.platform == "win32":
         return {"creationflags": 0x08000000}
     return {}
+
+
+def get_subprocess_env() -> dict[str, str] | None:
+    if not getattr(sys, "frozen", False):
+        return None
+    env = dict(os.environ)
+    lp_orig = env.get("LD_LIBRARY_PATH_ORIG")
+    if lp_orig is not None:
+        env["LD_LIBRARY_PATH"] = lp_orig
+    else:
+        env.pop("LD_LIBRARY_PATH", None)
+    return env
 
 
 def detect_system_language() -> str:

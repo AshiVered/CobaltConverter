@@ -12,7 +12,7 @@ from cobalt_converter.constants import (
     VIDEO_FORMATS,
     get_file_type,
 )
-from cobalt_converter.utils import get_base_path, get_subprocess_flags
+from cobalt_converter.utils import get_base_path, get_bundled_path, get_subprocess_env, get_subprocess_flags
 
 
 class ConversionEngine:
@@ -39,13 +39,15 @@ class ConversionEngine:
         if self.custom_ffmpeg_path and os.path.isfile(self.custom_ffmpeg_path):
             return self.custom_ffmpeg_path
         ffmpeg_name = "ffmpeg.exe" if sys.platform == "win32" else "ffmpeg"
-        local_path = os.path.join(get_base_path(), "bin", ffmpeg_name)
-        if os.path.isfile(local_path):
-            return local_path
+        for base in [get_base_path(), get_bundled_path()]:
+            local_path = os.path.join(base, "bin", ffmpeg_name)
+            if os.path.isfile(local_path):
+                return local_path
         try:
             subprocess.run(
                 [ffmpeg_name, "-version"],
                 capture_output=True,
+                env=get_subprocess_env(),
                 **get_subprocess_flags(),
             )
             return ffmpeg_name
@@ -149,6 +151,7 @@ class ConversionEngine:
                 text=True,
                 encoding="utf-8",
                 errors="replace",
+                env=get_subprocess_env(),
                 **get_subprocess_flags(),
             )
 
