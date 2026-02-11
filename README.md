@@ -1,6 +1,8 @@
 # CobaltConverter
 
-**CobaltConverter** is a cross-platform file conversion program built on top of **[FFmpeg](https://ffmpeg.org/)**.  
+[עברית](README.he.md)
+
+**CobaltConverter** is a cross-platform file conversion program built on top of **[FFmpeg](https://ffmpeg.org/)**.
 FFmpeg is a powerful multimedia toolkit, but it lacks a graphical interface — so **CobaltConverter** provides one using **[WxPython](https://github.com/wxWidgets/Phoenix)** for a flexible design that adapts itself to the operating system (Windows, Linux, macOS).
 
 ---
@@ -20,20 +22,41 @@ FFmpeg is a powerful multimedia toolkit, but it lacks a graphical interface — 
 
 ## 🧩 Installation
 
-### Windows
-Pre-compiled releases are available for **Windows** under the [Releases](../../releases) section.
+### Pre-compiled releases (recommended)
 
-### Other Operating Systems
-You can run the Python source directly on **Linux** or **macOS**.
-FFmpeg will be downloaded automatically on first use if not already installed.
+Download the latest version for your platform from the [Releases](../../releases) page.
+
+Each release includes two variants:
+- **Standard** — requires FFmpeg to be installed on your system (or will download it automatically)
+- **with-ffmpeg** — FFmpeg is bundled inside, works out of the box
+
+### macOS — first launch
+
+macOS blocks apps from unidentified developers by default. To open CobaltConverter:
+
+1. Extract the downloaded `.zip` file
+2. Double-click `CobaltConverter.app` — macOS will show a security warning
+3. Open **System Settings > Privacy & Security**
+4. Scroll down — you'll see a message about CobaltConverter being blocked
+5. Click **Open Anyway** and confirm
+
+You only need to do this once. After that the app will open normally.
+
+### Running from Python source
+
+If you prefer to run from source (any platform):
 
 #### Requirements
 - [Python 3.12+](https://www.python.org/downloads/)
 - [wxPython](https://github.com/wxWidgets/Phoenix)
 
-Install wxPython using pip:
+#### Setup
 
     pip install wxPython
+
+#### Run
+
+    python CobaltConverter.py
 
 ### Offline / Manual FFmpeg Setup
 CobaltConverter downloads FFmpeg automatically when needed. If you don't have internet access, you can set it up manually:
