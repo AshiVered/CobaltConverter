@@ -9,6 +9,13 @@ import wx
 import json
 import logging
 
+from ffmpeg.resolver import FFmpegResolver
+from exceptions.ffmpeg_exceptions import (
+    FFmpegDownloadError,
+    FFmpegExtractionError,
+    UnsupportedPlatformError,
+)
+
 class Translator:
     def __init__(self, initial_language='en'):
         self.language = initial_language
@@ -472,7 +479,7 @@ class CobaltConverterFrame(wx.Frame):
             wx.MessageBox(self.translator.get("no_format_message"), self.translator.get("no_format_title"), wx.ICON_WARNING)
             return
         if not self.get_ffmpeg_path():
-            self.prompt_for_ffmpeg_path()
+            self._offer_ffmpeg_download()
             if not self.get_ffmpeg_path(): return
 
         self.is_converting = True
@@ -641,6 +648,84 @@ class CobaltConverterFrame(wx.Frame):
                     file = filed.GetPath()
                     if file and os.path.isfile(file):
                         self.custom_ffmpeg_path = file
+
+    # --- FFmpeg Auto-Download ---
+    def _offer_ffmpeg_download(self):
+        title = self.translator.get("ffmpeg_not_found_title")
+        message = self.translator.get("ffmpeg_auto_download_offer")
+        dialog = wx.MessageDialog(self, message, title, wx.YES_NO | wx.CANCEL | wx.ICON_QUESTION)
+        dialog.SetYesNoCancelLabels(
+            self.translator.get("ffmpeg_download_btn"),
+            self.translator.get("ffmpeg_locate_btn"),
+            self.translator.get("cancel_btn"),
+        )
+        result = dialog.ShowModal()
+        dialog.Destroy()
+
+        if result == wx.ID_YES:
+            self._run_ffmpeg_download()
+        elif result == wx.ID_NO:
+            self.prompt_for_ffmpeg_path()
+
+    def _run_ffmpeg_download(self):
+        self.is_converting = True
+        self.convert_btn.Enable(False)
+        self.select_btn.Enable(False)
+        self.clear_btn.Enable(False)
+        self.progress_bar.SetValue(0)
+        self._set_status(self.translator.get("ffmpeg_downloading_status"))
+
+        self.dialog_event.clear()
+        threading.Thread(target=self._download_ffmpeg_thread, daemon=True).start()
+        self.dialog_event.wait()
+
+    def _download_ffmpeg_thread(self):
+        try:
+            resolver = FFmpegResolver(
+                bin_dir=pathlib.Path(get_base_path()) / "bin",
+                config_path=pathlib.Path(get_base_path()) / "config" / "ffmpeg_sources.json",
+                progress_callback=lambda downloaded, total: wx.CallAfter(
+                    self._set_download_progress, downloaded, total
+                ),
+                status_callback=lambda msg: wx.CallAfter(self._set_status, msg),
+            )
+            path = resolver.resolve()
+            logging.info("FFmpeg downloaded and cached at: %s", path)
+            wx.CallAfter(self._set_status, self.translator.get("ffmpeg_download_complete"))
+        except UnsupportedPlatformError:
+            logging.error("Unsupported platform for FFmpeg auto-download")
+            wx.CallAfter(self._set_status, self.translator.get("ffmpeg_unsupported_platform"))
+        except FFmpegDownloadError as e:
+            logging.error("FFmpeg download failed: %s", e)
+            wx.CallAfter(self._set_status, self.translator.get("ffmpeg_download_failed", error=str(e)))
+        except FFmpegExtractionError as e:
+            logging.error("FFmpeg extraction failed: %s", e)
+            wx.CallAfter(self._set_status, self.translator.get("ffmpeg_extraction_failed", error=str(e)))
+        finally:
+            wx.CallAfter(self._download_finished)
+
+    def _set_download_progress(self, bytes_downloaded: int, total_bytes: int):
+        if total_bytes > 0:
+            percentage = int((bytes_downloaded / total_bytes) * 100)
+            self.progress_bar.SetValue(percentage)
+            mb_downloaded = bytes_downloaded / (1024 * 1024)
+            mb_total = total_bytes / (1024 * 1024)
+            self.status_label.SetLabel(
+                self.translator.get(
+                    "ffmpeg_download_progress",
+                    downloaded=f"{mb_downloaded:.1f}",
+                    total=f"{mb_total:.1f}",
+                )
+            )
+        else:
+            self.progress_bar.Pulse()
+
+    def _download_finished(self):
+        self.is_converting = False
+        self.convert_btn.Enable(True)
+        self.select_btn.Enable(True)
+        self.clear_btn.Enable(True)
+        self.dialog_event.set()
 
     def closeEvent(self, event=None):
         # map to wx Close - bind via EVT_CLOSE if needed

@@ -7,3 +7,5 @@ CobaltConverter.exe
 CobaltConverter.log
 .idea
 CLAUDE.md
+bin/ffmpeg
+__pycache__/
