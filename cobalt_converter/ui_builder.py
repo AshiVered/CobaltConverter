@@ -5,7 +5,8 @@ from cobalt_converter.utils import get_ffmpeg_version
 
 class UIBuilderMixin:
     def _build_ui(self) -> None:
-        panel = wx.Panel(self)
+        self.main_panel = wx.Panel(self)
+        panel = self.main_panel
         main_sizer = wx.BoxSizer(wx.VERTICAL)
         panel.SetSizer(main_sizer)
         main_sizer.SetMinSize((600, 400))
@@ -124,7 +125,7 @@ class UIBuilderMixin:
             self.custom_panel.Show()
         else:
             self.custom_panel.Hide()
-        self.GetSizer() or self.Layout()
+        self.main_panel.Layout()
         self.Layout()
 
     def _update_quality_options(self) -> None:
