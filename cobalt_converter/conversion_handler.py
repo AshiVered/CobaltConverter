@@ -24,11 +24,45 @@ class ConversionMixin:
         self.clear_btn.Enable(False)
         self.progress_bar.SetValue(0)
 
+        quality_flags = self._build_quality_flags()
+
         self.engine.start(
             files=self.files.copy(),
             output_format=self.format_combo.GetValue(),
             output_folder=self.output_folder,
+            quality_flags=quality_flags,
         )
+
+    def _build_quality_flags(self) -> list[str]:
+        output_format = self.format_combo.GetValue()
+        selected = self.quality_combo.GetValue()
+        t = self.translator
+
+        if selected == t.get("quality_default"):
+            return []
+
+        if selected == t.get("quality_custom"):
+            values: dict[str, str | int] = {}
+            params = self.quality_manager.get_custom_params(output_format)
+            for param in params:
+                name = param["name"]
+                control = self.custom_controls.get(name)
+                if control is None:
+                    continue
+                if param["type"] == "slider":
+                    values[name] = control.GetValue()
+                elif param["type"] == "choice":
+                    values[name] = control.GetValue()
+            return self.quality_manager.build_custom_flags(output_format, values)
+
+        preset_map = {
+            t.get("quality_low"): "low",
+            t.get("quality_medium"): "medium",
+            t.get("quality_high"): "high",
+            t.get("quality_maximum"): "maximum",
+        }
+        preset_key = preset_map.get(selected, "")
+        return self.quality_manager.build_preset_flags(output_format, preset_key)
 
     def _stop_conversion(self) -> None:
         title = self.translator.get("stop_conversion_title")
