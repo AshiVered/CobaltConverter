@@ -82,7 +82,7 @@ class FileHandlingMixin:
             self.list_sizer.Layout()
             self.scroll.FitInside()
         except ValueError:
-            pass
+            logging.debug("Attempted to remove non-existent file from selection: %s", file_to_remove)
 
     def clear_files(self) -> None:
         if self.is_converting:

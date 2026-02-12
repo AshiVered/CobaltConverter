@@ -1,6 +1,8 @@
+import logging
+
 import wx
 
-from cobalt_converter.constants import LANGUAGES
+from cobalt_converter.constants import APP_AUTHOR, APP_AUTHOR_HE, APP_NAME, APP_VERSION, LANGUAGES
 from cobalt_converter.utils import get_ffmpeg_version, is_debug_mode
 
 
@@ -226,13 +228,13 @@ class UIBuilderMixin:
             else:
                 self.SetLayoutDirection(wx.Layout_LeftToRight)
         except AttributeError:
-            pass
+            logging.debug("SetLayoutDirection not supported on this platform")
         self._retranslate_ui()
         self.Layout()
 
     def _retranslate_ui(self) -> None:
         t = self.translator
-        title = t.get("window_title")
+        title = t.get("window_title", app_name=APP_NAME)
         if is_debug_mode():
             title += " [DEBUG]"
         self.SetTitle(title)
@@ -249,7 +251,8 @@ class UIBuilderMixin:
         self.language_label.SetLabel(t.get("language_label"))
 
         ffmpeg_version = getattr(self, "_cached_ffmpeg_version", None)
-        footer_text = t.get("footer")
+        author = APP_AUTHOR_HE if self.translator.language == "he" else APP_AUTHOR
+        footer_text = t.get("footer", app_name=APP_NAME, version=APP_VERSION, author=author)
         if ffmpeg_version:
             footer_text += f"  |  FFmpeg {ffmpeg_version}"
         else:

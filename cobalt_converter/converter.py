@@ -73,8 +73,8 @@ class ConversionEngine:
         if self._current_process:
             try:
                 self._current_process.terminate()
-            except (OSError, AttributeError):
-                pass
+            except (OSError, AttributeError) as exc:
+                logging.debug("Failed to terminate process %r: %s", self._current_process, exc)
 
     def _convert_all(self, files: list[str], initial_format: str, output_folder: str | None, quality_flags: list[str] | None = None) -> None:
         quality_flags = quality_flags or []

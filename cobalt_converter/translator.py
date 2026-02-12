@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 
 
@@ -21,7 +22,7 @@ class Translator:
                     with open(file_path, "r", encoding="utf-8") as f:
                         self.translations[lang_code] = json.load(f)
                 except (json.JSONDecodeError, OSError):
-                    pass
+                    logging.warning("Failed to load language file: %s", file_path)
 
     def set_language(self, lang_code: str) -> None:
         if lang_code in self.translations:
