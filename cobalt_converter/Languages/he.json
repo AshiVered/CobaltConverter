@@ -1,6 +1,6 @@
 {
-  "window_title": "CobaltConverter",
-  "footer": "CobaltConverter v0.6 מאת אשי ורד",
+  "window_title": "{app_name}",
+  "footer": "{app_name} v{version} מאת {author}",
   "language_label": "שפה:",
   "select_files_btn": "בחר קבצים",
   "clear_btn": "נקה",

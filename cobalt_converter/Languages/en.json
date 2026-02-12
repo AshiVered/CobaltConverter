@@ -1,6 +1,6 @@
 {
-  "window_title": "CobaltConverter",
-  "footer": "CobaltConverter v0.6 by Ashi Vered",
+  "window_title": "{app_name}",
+  "footer": "{app_name} v{version} by {author}",
   "language_label": "Language:",
   "select_files_btn": "Select Files",
   "clear_btn": "Clear",

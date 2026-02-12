@@ -3,6 +3,13 @@ import threading
 
 import wx
 
+from cobalt_converter.constants import (
+    APP_NAME,
+    WINDOW_HEIGHT,
+    WINDOW_MIN_HEIGHT,
+    WINDOW_MIN_WIDTH,
+    WINDOW_WIDTH,
+)
 from cobalt_converter.conversion_handler import ConversionMixin
 from cobalt_converter.converter import ConversionEngine
 from cobalt_converter.dialogs import FileDropTarget
@@ -23,8 +30,8 @@ class CobaltConverterFrame(
     wx.Frame,
 ):
     def __init__(self, settings: SettingsManager) -> None:
-        super().__init__(None, title="CobaltConverter", size=(700, 520))
-        self.SetMinSize((650, 450))
+        super().__init__(None, title=APP_NAME, size=(WINDOW_WIDTH, WINDOW_HEIGHT))
+        self.SetMinSize((WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT))
 
         self.settings = settings
         self.files: list[str] = []

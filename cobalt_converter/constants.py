@@ -15,6 +15,14 @@ VIDEO_FORMATS: list[str] = _CONFIG["video"]
 AUDIO_FORMATS: list[str] = _CONFIG["audio"]
 IMAGE_FORMATS: list[str] = _CONFIG["image"]
 LANGUAGES: dict[str, str] = _CONFIG["languages"]
+APP_NAME: str = _CONFIG["app_name"]
+APP_VERSION: str = _CONFIG["app_version"]
+APP_AUTHOR: str = _CONFIG["app_author"]
+APP_AUTHOR_HE: str = _CONFIG["app_author_he"]
+WINDOW_WIDTH: int = _CONFIG["window_width"]
+WINDOW_HEIGHT: int = _CONFIG["window_height"]
+WINDOW_MIN_WIDTH: int = _CONFIG["window_min_width"]
+WINDOW_MIN_HEIGHT: int = _CONFIG["window_min_height"]
 
 
 def get_file_type(file_path: str) -> str:
