@@ -2,9 +2,6 @@ import json
 import logging
 import os
 
-from cobalt_converter.constants import get_file_type
-
-
 class QualityManager:
     PRESET_KEYS = ["low", "medium", "high", "maximum"]
 

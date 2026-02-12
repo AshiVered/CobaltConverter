@@ -32,7 +32,7 @@ jobs:
             ffmpeg_binary: "ffmpeg.exe"
 
           - os: macos-latest
-            platform: macos-arm64
+            platform: macos-x64
             ffmpeg_url: "https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip"
             ffmpeg_archive: zip
             ffmpeg_inner_path: "ffmpeg"

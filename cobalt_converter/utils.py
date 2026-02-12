@@ -85,7 +85,7 @@ def setup_logging(debug: bool = False) -> str:
         if os.path.exists(log_path):
             os.remove(log_path)
     except OSError:
-        pass
+        logging.debug("Failed to remove previous log file: %s", log_path)
 
     level = config["debug_level"] if debug else config["default_level"]
 
@@ -139,7 +139,7 @@ def _log_system_info() -> None:
     else:
         logging.debug("FFmpeg: not found")
 
-    logging.debug("Locale: %s", locale.getdefaultlocale())
+    logging.debug("Locale: %s", locale.getlocale())
     logging.debug("LANG env: %s", os.environ.get("LANG", "not set"))
     logging.debug("========================================")
 
@@ -193,7 +193,7 @@ def detect_system_language() -> str:
                 if primary_lang in LANGUAGES:
                     return primary_lang
         except (OSError, AttributeError):
-            pass
+            logging.debug("Failed to detect Windows UI language via ctypes")
     else:
         lang_code = os.environ.get("LANG")
         if lang_code:
@@ -212,6 +212,7 @@ def get_ffmpeg_version(ffmpeg_path: str | None) -> str | None:
             capture_output=True,
             text=True,
             timeout=5,
+            env=get_subprocess_env(),
             **get_subprocess_flags(),
         )
         if result.returncode == 0:
@@ -220,5 +221,5 @@ def get_ffmpeg_version(ffmpeg_path: str | None) -> str | None:
             if match:
                 return match.group(1)
     except (FileNotFoundError, subprocess.TimeoutExpired):
-        pass
+        logging.debug("Failed to get FFmpeg version from: %s", ffmpeg_path)
     return None

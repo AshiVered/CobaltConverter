@@ -58,7 +58,7 @@ class FFmpegDownloadMixin:
         try:
             resolver = FFmpegResolver(
                 bin_dir=pathlib.Path(get_base_path()) / "bin",
-                config_path=pathlib.Path(get_base_path()) / "cobalt_converter" / "config" / "ffmpeg_sources.json",
+                config_path=pathlib.Path(os.path.dirname(__file__)) / "config" / "ffmpeg_sources.json",
                 progress_callback=lambda downloaded, total: wx.CallAfter(
                     self._set_download_progress, downloaded, total
                 ),
@@ -106,4 +106,5 @@ class FFmpegDownloadMixin:
         if self._pending_conversion_after_download and self.engine.get_ffmpeg_path():
             self._pending_conversion_after_download = False
             self.start_conversion()
-        self._pending_conversion_after_download = False
+        else:
+            self._pending_conversion_after_download = False

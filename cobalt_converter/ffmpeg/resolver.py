@@ -6,7 +6,6 @@ from collections.abc import Callable
 
 from cobalt_converter.exceptions.ffmpeg_exceptions import (
     FFmpegDownloadError,
-    FFmpegExtractionError,
     UnsupportedPlatformError,
 )
 from cobalt_converter.ffmpeg.downloader import download_file
