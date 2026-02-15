@@ -1,0 +1,215 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Release tag (e.g., v1.0.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  PYTHON_VERSION: "3.12"
+  APP_NAME: "CobaltConverter"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win64
+            ffmpeg_url: "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
+            ffmpeg_archive: zip
+            ffmpeg_inner_path: "ffmpeg-master-latest-win64-gpl/bin/ffmpeg.exe"
+            ffmpeg_binary: "ffmpeg.exe"
+
+          - os: macos-latest
+            platform: macos-x64
+            ffmpeg_url: "https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip"
+            ffmpeg_archive: zip
+            ffmpeg_inner_path: "ffmpeg"
+            ffmpeg_binary: "ffmpeg"
+
+          - os: ubuntu-22.04
+            platform: linux-x64
+            ffmpeg_url: "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz"
+            ffmpeg_archive: tar.xz
+            ffmpeg_inner_path: "ffmpeg-master-latest-linux64-gpl/bin/ffmpeg"
+            ffmpeg_binary: "ffmpeg"
+
+    runs-on: ${{ matrix.os }}
+    name: Build (${{ matrix.platform }})
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Resolve version tag
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── System deps (Linux) ──────────────────────────────────────
+      - name: Install GTK3 libraries (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev \
+            freeglut3-dev libnotify-dev libjpeg-dev libpng-dev \
+            libtiff-dev libsdl2-dev libsm-dev libunwind-dev
+
+      # ── Python deps ──────────────────────────────────────────────
+      - name: Install Python deps (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: pip install wxPython pyinstaller
+
+      - name: Install Python deps (macOS)
+        if: runner.os == 'macOS'
+        run: pip install wxPython pyinstaller
+
+      - name: Install Python deps (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          pip install -U -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-22.04 wxPython
+          pip install pyinstaller
+
+      # ── Build LITE ───────────────────────────────────────────────
+      - name: Build lite
+        shell: bash
+        run: pyinstaller CobaltConverter.spec
+
+      - name: Package lite
+        shell: bash
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          NAME="${{ env.APP_NAME }}-${TAG}-${{ matrix.platform }}"
+          mkdir -p "staging/${NAME}"
+          if [ "${{ runner.os }}" = "macOS" ]; then
+            cp -R "dist/${{ env.APP_NAME }}.app" "staging/${NAME}/"
+          else
+            cp "dist/${{ env.APP_NAME }}"* "staging/${NAME}/"
+          fi
+          cd staging
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            7z a "../${NAME}.zip" "${NAME}"
+          elif [ "${{ runner.os }}" = "macOS" ]; then
+            zip -yr "../${NAME}.zip" "${NAME}"
+          else
+            zip -r "../${NAME}.zip" "${NAME}"
+          fi
+
+      # ── Download FFmpeg ──────────────────────────────────────────
+      - name: Download FFmpeg
+        shell: bash
+        run: |
+          mkdir -p bin
+          if [ "${{ matrix.ffmpeg_archive }}" = "zip" ]; then
+            curl -L -o ffmpeg_dl.zip "${{ matrix.ffmpeg_url }}"
+            unzip -o ffmpeg_dl.zip -d ffmpeg_extracted
+            cp "ffmpeg_extracted/${{ matrix.ffmpeg_inner_path }}" "bin/${{ matrix.ffmpeg_binary }}"
+            rm ffmpeg_dl.zip
+          else
+            curl -L -o ffmpeg_dl.tar.xz "${{ matrix.ffmpeg_url }}"
+            tar -xf ffmpeg_dl.tar.xz
+            cp "${{ matrix.ffmpeg_inner_path }}" "bin/${{ matrix.ffmpeg_binary }}"
+            rm ffmpeg_dl.tar.xz
+          fi
+          chmod +x "bin/${{ matrix.ffmpeg_binary }}"
+
+      # ── Build FULL ──────────────────────────────────────────────
+      - name: Clean previous build
+        shell: bash
+        run: rm -rf dist build
+
+      - name: Build full (with FFmpeg)
+        shell: bash
+        env:
+          INCLUDE_FFMPEG: "1"
+        run: pyinstaller CobaltConverter.spec
+
+      - name: Package full
+        shell: bash
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          NAME="${{ env.APP_NAME }}-${TAG}-${{ matrix.platform }}-with-ffmpeg"
+          mkdir -p "staging/${NAME}"
+          if [ "${{ runner.os }}" = "macOS" ]; then
+            cp -R "dist/${{ env.APP_NAME }}.app" "staging/${NAME}/"
+          else
+            cp "dist/${{ env.APP_NAME }}"* "staging/${NAME}/"
+          fi
+          cd staging
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            7z a "../${NAME}.zip" "${NAME}"
+          elif [ "${{ runner.os }}" = "macOS" ]; then
+            zip -yr "../${NAME}.zip" "${NAME}"
+          else
+            zip -r "../${NAME}.zip" "${NAME}"
+          fi
+
+      # ── Upload ───────────────────────────────────────────────────
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.platform }}
+          path: |
+            ${{ env.APP_NAME }}-*.zip
+          retention-days: 5
+
+  # ═══════════════════════════════════════════════════════════════════
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    name: Publish Release
+
+    steps:
+      - name: Resolve version tag
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: release-assets
+
+      - name: List assets
+        run: ls -la release-assets/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "${{ env.APP_NAME }} ${{ steps.version.outputs.tag }}"
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: release-assets/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

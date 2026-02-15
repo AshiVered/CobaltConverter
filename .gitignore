@@ -1,7 +1,11 @@
 log.txt
 dist/
 build/
-CobaltConverter.spec
 CobaltConverter.exe
 *.zip
 CobaltConverter.log
+.idea
+CLAUDE.md
+bin/ffmpeg
+__pycache__/
+settings.json

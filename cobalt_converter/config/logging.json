@@ -1,0 +1,7 @@
+{
+  "log_filename": "CobaltConverter.log",
+  "default_level": "INFO",
+  "debug_level": "DEBUG",
+  "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+  "date_format": "%Y-%m-%d %H:%M:%S"
+}

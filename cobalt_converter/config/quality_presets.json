@@ -1,0 +1,65 @@
+{
+  "type_defaults": {
+    "video": {
+      "presets": {
+        "low": ["-crf", "32", "-preset", "fast"],
+        "medium": ["-crf", "23", "-preset", "medium"],
+        "high": ["-crf", "18", "-preset", "slow"],
+        "maximum": ["-crf", "10", "-preset", "veryslow"]
+      },
+      "custom": [
+        {"name": "crf", "type": "slider", "min": 0, "max": 51, "default": 23, "flag": "-crf"},
+        {"name": "preset", "type": "choice", "options": ["ultrafast", "fast", "medium", "slow", "veryslow"], "default": "medium", "flag": "-preset"}
+      ]
+    },
+    "audio": {
+      "presets": {
+        "low": ["-b:a", "96k"],
+        "medium": ["-b:a", "192k"],
+        "high": ["-b:a", "256k"],
+        "maximum": ["-b:a", "320k"]
+      },
+      "custom": [
+        {"name": "bitrate", "type": "slider", "min": 32, "max": 512, "default": 192, "step": 32, "suffix": "k", "flag": "-b:a"}
+      ]
+    },
+    "image": {
+      "presets": {
+        "low": ["-q:v", "15"],
+        "medium": ["-q:v", "5"],
+        "high": ["-q:v", "2"],
+        "maximum": ["-q:v", "1"]
+      },
+      "custom": [
+        {"name": "quality", "type": "slider", "min": 1, "max": 31, "default": 5, "flag": "-q:v"}
+      ]
+    }
+  },
+  "format_overrides": {
+    "avi": {
+      "presets": {
+        "low": ["-q:v", "15"],
+        "medium": ["-q:v", "5"],
+        "high": ["-q:v", "2"],
+        "maximum": ["-q:v", "1"]
+      }
+    },
+    "wmv": {
+      "presets": {
+        "low": ["-q:v", "15"],
+        "medium": ["-q:v", "5"],
+        "high": ["-q:v", "2"],
+        "maximum": ["-q:v", "1"]
+      }
+    },
+    "flv": {
+      "presets": {
+        "low": ["-q:v", "15"],
+        "medium": ["-q:v", "5"],
+        "high": ["-q:v", "2"],
+        "maximum": ["-q:v", "1"]
+      }
+    }
+  },
+  "lossless_formats": ["wav", "flac", "png", "bmp", "tiff"]
+}
