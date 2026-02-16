@@ -128,4 +128,4 @@ See [LICENSE](LICENSE) for details.
 ## 💬 Credits
 
 - **Main developer:** [Ashi Vered](https://github.com/AshiVered)  
-- **Contributors:** [Yisroel Tech](https://github.com/YisroelTech), [cfopuser](https://github.com/cfopuser)
+- **Contributors:** [Yisroel Tech](https://github.com/YisroelTech), [cfopuser](https://github.com/cfopuser) [EliShteinman](https://github.com/EliShteinman)
